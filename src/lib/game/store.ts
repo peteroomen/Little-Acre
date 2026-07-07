@@ -16,6 +16,17 @@ import {
   type Tile,
   type Tool,
 } from './tiles';
+import {
+  ENERGY_PER_LEVEL,
+  harvestMultFor,
+  isMaxed,
+  maxEnergyFor,
+  upgradeCost,
+  UPGRADE_DEFS,
+  ZERO_UPGRADES,
+  type UpgradeId,
+  type UpgradeLevels,
+} from './upgrades';
 
 export type StoreTab = 'shop' | 'boost' | 'guide';
 
@@ -65,6 +76,7 @@ export interface GameState {
   maxEnergy: number;
   bloom: number;
   board: Tile[];
+  upgrades: UpgradeLevels;
 
   // ── ui state ──
   phase: 'day' | 'night';
@@ -85,6 +97,7 @@ export interface GameState {
   setSelectedBuild: (id: BuildId) => void;
   useTool: (r: number, c: number) => ActionResult;
   sleep: () => void;
+  buyUpgrade: (id: UpgradeId) => void;
   rebloom: () => void;
   openStore: () => void;
   closeStore: () => void;
@@ -129,7 +142,7 @@ export const useGameStore = create<GameState>((set, get) => {
     // instead of clearing (see harvestPatch).
     if (isRipe(t)) {
       const crop = t.crop!;
-      const gain = harvestValue(crop, get().bloom);
+      const gain = harvestValue(crop, get().bloom * harvestMultFor(get().upgrades));
       set((s) => ({ coins: s.coins + gain }));
       patchTile(r, c, harvestPatch(t));
       return { fx: 'harvest', r, c, gain, color: CROPS[crop].color };
@@ -261,6 +274,7 @@ export const useGameStore = create<GameState>((set, get) => {
     maxEnergy: 16,
     bloom: 1.4,
     board: createBoard(),
+    upgrades: { ...ZERO_UPGRADES },
 
     phase: 'day',
     night: { title: '', sub: '' },
@@ -331,6 +345,32 @@ export const useGameStore = create<GameState>((set, get) => {
       }, NIGHT_WAKE_MS);
     },
 
+    buyUpgrade: (id) => {
+      const { coins, upgrades } = get();
+      const level = upgrades[id];
+      if (isMaxed(id, level)) return;
+      const cost = upgradeCost(id, level);
+      if (coins < cost) {
+        get().toast('Not enough coins', 'bad');
+        return;
+      }
+      const nextLevels: UpgradeLevels = { ...upgrades, [id]: level + 1 };
+      set((s) => {
+        const patch: Partial<GameState> = {
+          coins: s.coins - cost,
+          upgrades: nextLevels,
+        };
+        // Extra Energy raises the ceiling and tops up the current day so it's felt now.
+        if (id === 'energy') {
+          patch.maxEnergy = maxEnergyFor(nextLevels);
+          patch.energy = Math.min(patch.maxEnergy, s.energy + ENERGY_PER_LEVEL);
+        }
+        return patch;
+      });
+      get().toast(`${UPGRADE_DEFS[id].name} upgraded`, 'ok');
+      get().save();
+    },
+
     rebloom: () => {
       // First-pass prestige: reset the farm, keep a compounding Bloom + a gem dividend.
       // Economy still being modelled — see docs/design/GDD.md.
@@ -370,6 +410,7 @@ export const useGameStore = create<GameState>((set, get) => {
         maxEnergy: s.maxEnergy,
         bloom: s.bloom,
         board: s.board,
+        upgrades: s.upgrades,
         seen: s.seen,
         savedAt: Date.now(),
       });
@@ -387,14 +428,17 @@ function dispatchBuild(
 }
 
 function applySave(set: (partial: Partial<GameState>) => void, save: SaveState): void {
+  // Recompute maxEnergy from upgrade levels so a stale saved ceiling can't desync.
+  const maxEnergy = maxEnergyFor(save.upgrades);
   set({
     coins: save.coins,
     gems: save.gems,
     day: save.day,
-    energy: save.energy,
-    maxEnergy: save.maxEnergy,
+    energy: Math.min(save.energy, maxEnergy),
+    maxEnergy,
     bloom: save.bloom,
     board: save.board,
+    upgrades: save.upgrades,
     seen: save.seen,
   });
 }

@@ -13,6 +13,7 @@ function fullSave(): SaveState {
     maxEnergy: 16,
     bloom: 2.2,
     board: createBoard(),
+    upgrades: { energy: 2, fertilizer: 1 },
     seen: { carrot: 1 },
     savedAt: 1_700_000_000_000,
   };
@@ -39,6 +40,7 @@ describe('parseSave', () => {
     expect(parsed!.maxEnergy).toBe(16);
     expect(parsed!.bloom).toBe(1.4);
     expect(parsed!.board).toHaveLength(9);
+    expect(parsed!.upgrades).toEqual({ energy: 0, fertilizer: 0 });
     expect(parsed!.version).toBe(SAVE_VERSION);
   });
 

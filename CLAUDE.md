@@ -266,8 +266,21 @@ Trade-offs — what this makes easier or harder.
 
 > **Update this section at the end of every session** — what shipped, what's next.
 
-- **Phase:** M0 scaffold shipped; M2 economy started (first content slice landed).
-- **This session (2026-07-07): Tier-1 crop roles — grow times + re-yield** (branch
+- **Phase:** M0 scaffold shipped; M2 economy underway (crops + real upgrade purchases landed).
+- **This session (2026-07-07): real Store purchases — buyable upgrades** (branch
+  `feature/shop-upgrades`, PR after #1). The Store's **Boost** tab is now a real economy: new pure
+  `src/lib/game/upgrades.ts` (data-driven `UPGRADE_DEFS` + geometric `upgradeCost` + derived
+  `maxEnergyFor`/`harvestMultFor` + `normalizeUpgrades`) drives two levelled upgrades — **Extra
+  Energy** (+2 max energy/level) and **Rich Fertilizer** (+8% harvest value/level). Store gained
+  `upgrades` + `buyUpgrade` (spend coins → level up → recompute maxEnergy + top up the current day on
+  an Energy buy); harvest payout now `harvestValue(crop, bloom × harvestMultFor(upgrades))`. Save
+  **v3** persists levels; `applySave` recomputes maxEnergy from them so it can't desync. Boost tab
+  renders real cards (level pill `Lv n / max`, current + next effect, cost button that disables when
+  unaffordable/maxed). Shop-tab tools/seeds stay presentational (gated on the tool system + Tier-2).
+  lint/type-check/build clean, **31 tests** green (+6). See `docs/work/2026-07-07-shop-upgrades.md`.
+  **Next:** gathering throttle (pond stock / rock respawn), then the tool system (bought tier-I → the
+  Shop tab goes real) + Tier-2 crops. A Playwright visual pass over both economy slices is pending.
+- **Prior session (2026-07-07): Tier-1 crop roles — grow times + re-yield** (branch
   `feature/tier1-crop-roles`). Replaced the prototype's four look-alike crops (all fixed 3-night
   grow) with the designed **Tier-1 set**: **Carrot** (4c, 2 nights, sell 20 — bootstrap),
   **Potato** (6c, 3 nights, 34 — staple), **Tomato** (12c, 4 nights, 18 — _re-yields 3× on the
