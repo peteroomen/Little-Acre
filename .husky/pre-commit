@@ -1,0 +1,3 @@
+#!/bin/sh
+MAIN_REPO=$(cd "$(git rev-parse --git-common-dir)/.." && pwd)
+"$MAIN_REPO/node_modules/.bin/lint-staged"

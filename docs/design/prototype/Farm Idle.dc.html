@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body { font-family: 'Fredoka', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #7bb37a; text-decoration: none; }
+    a:hover { color: #5f9a5e; }
+    canvas { display: block; image-rendering: pixelated; cursor: pointer; }
+    @keyframes fi-pop { 0% { transform: scale(.9) translateY(6px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+    @keyframes fi-toast { 0% { transform: translateY(10px) scale(.9); opacity: 0; } 12% { transform: translateY(0) scale(1); opacity: 1; } 82% { opacity: 1; } 100% { transform: translateY(-6px); opacity: 0; } }
+    @keyframes fi-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    @keyframes fi-stars { 0%,100% { opacity: .4; } 50% { opacity: 1; } }
+  </style>
+</helmet>
+<div style="position:relative; width:100%; height:100vh; min-height:560px; overflow:hidden; background:linear-gradient(#d8edf2 0%, #e7f2e4 48%, #fbeecb 100%); font-family:'Fredoka',sans-serif; user-select:none;">
+
+  <!-- GAME CANVAS -->
+  <div style="position:absolute; inset:0;">
+    <canvas id="farm-canvas"></canvas>
+  </div>
+
+  <!-- HOVER TOOLTIP -->
+  <sc-if value="{{ hover }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ hoverStyle }}">
+      <div style="font-family:'Pixelify Sans',monospace; font-size:14px; font-weight:600; color:#6b5236;">{{ hover.name }}</div>
+      <div style="font-size:11px; color:#a08a6c; margin-top:1px;">{{ hover.sub }}</div>
+    </div>
+  </sc-if>
+
+  <!-- TOP HUD -->
+  <div style="position:absolute; top:0; left:0; right:0; padding:16px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; pointer-events:none;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; pointer-events:auto;">
+      <div style="display:flex; align-items:center; gap:8px; background:#fff7ea; padding:8px 15px 8px 10px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.16), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a) drop-shadow(0 7px 6px rgba(150,110,30,.2)); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+        <span style="width:18px; height:18px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0, inset -3px -3px 0 rgba(200,140,10,.4); clip-path:polygon(0 5px,5px 5px,5px 0,13px 0,13px 5px,18px 5px,18px 13px,13px 13px,13px 18px,5px 18px,5px 13px,0 13px); display:inline-block;"></span>
+        <span style="font-family:'Pixelify Sans',monospace; font-size:21px; font-weight:600; color:#c08a1e; line-height:1; min-width:52px;">{{ coins }}</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; background:#f5eeff; padding:8px 15px 8px 10px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(90,60,150,.14), inset 0 0 0 3px #d3bff2; filter:drop-shadow(0 4px 0 #c8b0ec) drop-shadow(0 7px 6px rgba(90,60,150,.18)); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+        <span style="width:16px; height:16px; background:#a98bf0; transform:rotate(45deg); box-shadow:inset 0 0 0 2px #efe3ff, inset -3px -3px 0 rgba(80,50,150,.35); display:inline-block;"></span>
+        <span style="font-family:'Pixelify Sans',monospace; font-size:21px; font-weight:600; color:#8a63e0; line-height:1;">{{ gems }}</span>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:flex-start; gap:10px; pointer-events:auto;">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+        <div style="display:flex; align-items:center; gap:9px; background:#fff2e4; padding:8px 14px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(160,100,50,.14), inset 0 0 0 3px #f4cfa6; filter:drop-shadow(0 4px 0 #eec092) drop-shadow(0 7px 6px rgba(160,100,50,.16)); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+          <span style="font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#cf8f5c;">Day</span>
+          <span style="font-family:'Pixelify Sans',monospace; font-size:18px; font-weight:600; color:#c46d38; line-height:1;">{{ day }}</span>
+          <span style="width:2px; height:14px; background:#f0cfa8;"></span>
+          <span style="font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#c99a6e;">Bloom</span>
+          <span style="font-family:'Pixelify Sans',monospace; font-size:14px; color:#c46d38;">{{ bloomTxt }}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; background:#fff7ea; padding:6px 12px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.14), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a) drop-shadow(0 7px 6px rgba(150,110,30,.16)); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+          <svg width="14" height="14" viewBox="0 0 14 14"><path d="M8 1 L3 8 L7 8 L6 13 L11 6 L7 6 Z" fill="#f5a623"/></svg>
+          <div style="width:120px; height:11px; background:#f6e2c6; box-shadow:inset 0 0 0 2px #edcb9e; overflow:hidden; clip-path:polygon(0 2px,2px 2px,2px 0,calc(100% - 2px) 0,calc(100% - 2px) 2px,100% 2px,100% calc(100% - 2px),calc(100% - 2px) calc(100% - 2px),calc(100% - 2px) 100%,2px 100%,2px calc(100% - 2px),0 calc(100% - 2px));">
+            <div style="width:{{ energyPct }}; height:100%; background:#f5b23c; box-shadow:inset 0 2px 0 rgba(255,255,255,.4); transition:width .25s;"></div>
+          </div>
+          <span style="font-family:'Pixelify Sans',monospace; font-size:14px; font-weight:600; color:#c08a1e; line-height:1;">{{ energyTxt }}</span>
+        </div>
+      </div>
+      <button onClick="{{ onSleep }}" style="{{ sleepStyle }}">
+        <svg width="26" height="26" viewBox="0 0 26 26"><path d="M18 15 A7 7 0 1 1 11 6 A5.5 5.5 0 0 0 18 15 Z" fill="#fff0b8"/></svg>
+        <span>Sleep</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div style="position:absolute; left:0; right:0; bottom:150px; display:flex; flex-direction:column-reverse; align-items:center; gap:6px; pointer-events:none; z-index:12;">
+    <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="0">
+      <div style="{{ t.style }}">{{ t.text }}</div>
+    </sc-for>
+  </div>
+
+  <!-- BUILD PICKER (land + crops + structures) -->
+  <sc-if value="{{ buildPicker }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; left:0; right:0; bottom:108px; display:flex; justify-content:center; padding:0 10px; z-index:11;">
+      <div style="display:flex; gap:7px; flex-wrap:wrap; justify-content:center; background:#fdf3e0; padding:8px; box-shadow:inset 0 3px 0 rgba(255,255,255,.6), inset 0 -5px 0 rgba(150,110,40,.14), inset 0 0 0 3px #e7cfa5; filter:drop-shadow(0 5px 0 #e0c193) drop-shadow(0 8px 8px rgba(150,110,40,.18)); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));">
+        <sc-for list="{{ buildOptions }}" as="o" hint-placeholder-count="6">
+          <button onClick="{{ o.onPick }}" style="{{ o.style }}">
+            <span style="width:20px; height:20px; background:{{ o.color }}; box-shadow:inset 0 -3px 0 rgba(0,0,0,.16); clip-path:polygon(0 4px,4px 4px,4px 0,16px 0,16px 4px,20px 4px,20px 16px,16px 16px,16px 20px,4px 20px,4px 16px,0 16px);"></span>
+            <span style="font-family:'Pixelify Sans',monospace; font-size:12px;">{{ o.name }}</span>
+            <span style="display:flex; align-items:center; gap:3px; font-family:'Pixelify Sans',monospace; font-size:12px; color:#c08a1e;"><span style="width:9px;height:9px;background:#f7c948;box-shadow:inset 0 0 0 1px #fce9b0;"></span>{{ o.cost }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- BOTTOM HOTBAR -->
+  <div style="position:absolute; left:0; right:0; bottom:0; padding:14px 12px; display:flex; justify-content:center; z-index:10;">
+    <div style="width:100%; max-width:660px; background:#fdf3e0; padding:11px; display:flex; align-items:stretch; gap:9px; flex-wrap:wrap; box-shadow:inset 0 4px 0 rgba(255,255,255,.9), inset 0 -7px 0 rgba(150,110,40,.16), inset 0 0 0 3px #fffaf0, inset 0 0 0 6px #e7cfa5; filter:drop-shadow(0 6px 0 #e0c193) drop-shadow(0 12px 16px rgba(150,110,40,.22)); clip-path:polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px));">
+      <div style="display:flex; gap:8px; flex:1; min-width:0;">
+        <button onClick="{{ onClickTool }}" style="{{ toolClick }}">
+          <svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 3 L8 15 L11 12.5 L13.5 18 L15.5 17 L13 11.5 L17 11 Z" fill="#6a4a2a" stroke="#3a2814" stroke-width="1"/></svg>
+          <span>Click</span>
+        </button>
+        <button onClick="{{ onBuildTool }}" style="{{ toolBuild }}">
+          <svg width="24" height="24" viewBox="0 0 24 24"><rect x="9.5" y="10" width="2.6" height="11" fill="#8a5a2b" transform="rotate(-28 11 15)"/><path d="M12.5 4 L19.5 8 L16.5 13 L9.5 9 Z" fill="#b7ad93" stroke="#7d745e" stroke-width="1"/></svg>
+          <span>Build</span>
+        </button>
+      </div>
+
+      <div style="width:3px; background:#ecd9b6; align-self:stretch;"></div>
+
+      <div style="display:flex; gap:8px;">
+        <button onClick="{{ openStore }}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; width:74px; padding:8px 6px; border:none; background:#aadd85; color:#3a5c1f; box-shadow:inset 0 3px 0 rgba(255,255,255,.45), inset 0 -5px 0 rgba(40,80,20,.28), inset 0 0 0 3px #bfe89b; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:13px; filter:drop-shadow(0 5px 0 #7fb35c) drop-shadow(0 8px 6px rgba(60,90,30,.22)); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">
+          <svg width="22" height="22" viewBox="0 0 22 22"><rect x="4" y="8" width="14" height="8" fill="#fbf3dc"/><rect x="4" y="6" width="14" height="3" fill="#e58a6a"/><rect x="6" y="6" width="2" height="3" fill="#fbf3dc"/><rect x="10" y="6" width="2" height="3" fill="#fbf3dc"/><rect x="14" y="6" width="2" height="3" fill="#fbf3dc"/></svg>
+          <span>Store</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NIGHT OVERLAY -->
+  <div style="{{ nightStyle }}">
+    <div style="position:absolute; inset:0; overflow:hidden;">
+      <span style="position:absolute; top:14%; left:18%; width:3px; height:3px; background:#fff; animation:fi-stars 2.2s infinite;"></span>
+      <span style="position:absolute; top:22%; left:70%; width:3px; height:3px; background:#fff; animation:fi-stars 1.8s .3s infinite;"></span>
+      <span style="position:absolute; top:33%; left:44%; width:2px; height:2px; background:#fff; animation:fi-stars 2.6s .6s infinite;"></span>
+      <span style="position:absolute; top:12%; left:52%; width:2px; height:2px; background:#fff; animation:fi-stars 2s .9s infinite;"></span>
+      <span style="position:absolute; top:26%; left:30%; width:2px; height:2px; background:#fff; animation:fi-stars 2.4s .2s infinite;"></span>
+    </div>
+    <div style="position:relative; text-align:center;">
+      <div style="margin:0 auto 16px; width:70px; height:70px; position:relative; animation:fi-pulse 3s infinite;">
+        <div style="position:absolute; inset:0; background:#fff0b8; border-radius:50%; box-shadow:0 0 40px rgba(255,240,184,.5);"></div>
+        <div style="position:absolute; top:-6px; right:-10px; width:64px; height:64px; border-radius:50%; background:#201b45;"></div>
+      </div>
+      <div style="font-family:'Pixelify Sans',monospace; font-size:34px; font-weight:600; color:#fdf3e0; letter-spacing:2px;">{{ nightTitle }}</div>
+      <div style="font-family:'Fredoka',sans-serif; font-size:15px; color:#c8bfe0; margin-top:6px;">{{ nightSub }}</div>
+    </div>
+  </div>
+
+  <!-- STORE MODAL (Shop · Boost · Guide) -->
+  <sc-if value="{{ storeOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeStore }}" style="position:absolute; inset:0; background:rgba(80,60,35,.3); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; padding:16px; z-index:20;">
+      <div onClick="{{ stop }}" style="width:100%; max-width:640px; max-height:86vh; overflow:auto; background:#fdf6e7; box-shadow:inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 8px 0 #dcc39a) drop-shadow(0 16px 30px rgba(120,85,25,.28)); animation:fi-pop .16s ease-out; clip-path:polygon(0 7px,7px 7px,7px 0,calc(100% - 7px) 0,calc(100% - 7px) 7px,100% 7px,100% calc(100% - 7px),calc(100% - 7px) calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,7px calc(100% - 7px),0 calc(100% - 7px));">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px 10px; position:sticky; top:0; background:#fdf6e7; z-index:2;">
+          <div style="display:flex; gap:6px;">
+            <button onClick="{{ showShop }}" style="{{ tabShopStyle }}">Shop</button>
+            <button onClick="{{ showBoost }}" style="{{ tabBoostStyle }}">Boost</button>
+            <button onClick="{{ showGuide }}" style="{{ tabGuideStyle }}">Guide</button>
+          </div>
+          <button onClick="{{ closeStore }}" style="width:34px; height:34px; border:none; background:#fff1dd; box-shadow:inset 0 0 0 3px #e7cfa5; color:#a0895f; font-size:16px; cursor:pointer; clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">✕</button>
+        </div>
+
+        <!-- SHOP TAB -->
+        <sc-if value="{{ isShop }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:4px 16px 18px; display:grid; grid-template-columns:repeat(auto-fill,minmax(178px,1fr)); gap:10px;">
+          <sc-for list="{{ shopItems }}" as="it" hint-placeholder-count="6">
+            <div style="background:#fffaf0; box-shadow:inset 0 0 0 3px #f0e0c4; padding:12px; display:flex; flex-direction:column; gap:8px; clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="width:34px; height:34px; flex:none; background:{{ it.color }}; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));"></span>
+                <div style="min-width:0;">
+                  <div style="font-weight:600; font-size:14px; color:#5a462f;">{{ it.name }}</div>
+                  <div style="font-size:11px; color:#a08862;">{{ it.tag }}</div>
+                </div>
+              </div>
+              <div style="font-size:12px; color:#7a6547; line-height:1.35; min-height:32px;">{{ it.desc }}</div>
+              <button style="margin-top:auto; display:flex; align-items:center; justify-content:center; gap:6px; padding:9px; border:none; background:#aadd85; color:#3a5c1f; box-shadow:inset 0 0 0 3px #bfe89b; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; filter:drop-shadow(0 3px 0 #7fb35c); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">
+                <span style="width:13px; height:13px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0;"></span>
+                {{ it.price }}
+              </button>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <!-- GUIDE TAB -->
+        <sc-if value="{{ isGuide }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:4px 16px 18px; display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ guide }}" as="cat" hint-placeholder-count="4">
+            <div>
+              <div style="font-family:'Pixelify Sans',monospace; font-size:12px; letter-spacing:1.2px; text-transform:uppercase; color:#c99a6e; margin-bottom:7px;">{{ cat.title }}</div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:8px;">
+                <sc-for list="{{ cat.items }}" as="g" hint-placeholder-count="4">
+                  <div style="{{ g.cardStyle }}">
+                    <span style="{{ g.iconStyle }}"></span>
+                    <div style="min-width:0;">
+                      <div style="font-family:'Pixelify Sans',monospace; font-size:13px; color:#5a462f;">{{ g.name }}</div>
+                      <div style="font-size:11px; color:#a08862; line-height:1.3;">{{ g.desc }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <!-- BOOST TAB -->
+        <sc-if value="{{ isBoost }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:4px 16px 14px; display:flex; flex-direction:column; gap:9px;">
+          <sc-for list="{{ upgrades }}" as="up" hint-placeholder-count="4">
+            <div style="display:flex; align-items:center; gap:12px; background:#fffaf0; box-shadow:inset 0 0 0 3px #f0e0c4; padding:12px 14px; clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+              <span style="width:40px; height:40px; flex:none; background:{{ up.color }}; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));"></span>
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-weight:600; font-size:15px; color:#5a462f;">{{ up.name }}</span>
+                  <span style="font-family:'Pixelify Sans',monospace; font-size:12px; color:#c46d38; background:#ffe6cf; padding:1px 6px;">{{ up.level }}</span>
+                </div>
+                <div style="font-size:12px; color:#7a6547; margin-top:2px;">{{ up.desc }}</div>
+              </div>
+              <button style="flex:none; display:flex; align-items:center; gap:6px; padding:9px 12px; border:none; background:#ffd79b; color:#7a4a12; box-shadow:inset 0 0 0 3px #ffe6bd; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; filter:drop-shadow(0 3px 0 #e6ac5e); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">
+                <span style="width:12px; height:12px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0;"></span>
+                {{ up.price }}
+              </button>
+            </div>
+          </sc-for>
+          <div style="margin-top:6px; display:flex; align-items:center; gap:12px; background:#efe4ff; box-shadow:inset 0 0 0 3px #d3bff2; padding:14px; clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));">
+            <span style="width:40px; height:40px; flex:none; background:#a98bf0; transform:rotate(45deg); box-shadow:inset 0 3px 0 rgba(255,255,255,.4), inset 0 -5px 0 rgba(60,40,120,.3), inset 0 0 0 3px #c3aef8;"></span>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:700; font-size:15px; color:#6a4bb0;">Prestige · Bloom Reset</div>
+              <div style="font-size:12px; color:#8a73c0; margin-top:2px;">Reset your farm for a permanent ×1.6 harvest multiplier and 8 gems.</div>
+            </div>
+            <button style="flex:none; padding:10px 14px; border:none; background:#a98bf5; color:#fff; box-shadow:inset 0 3px 0 rgba(255,255,255,.35), inset 0 -5px 0 rgba(60,40,120,.35), inset 0 0 0 3px #c3aef8; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:13px; filter:drop-shadow(0 5px 0 #7b57d6) drop-shadow(0 8px 6px rgba(60,40,120,.28)); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">Rebloom</button>
+          </div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;100vh&quot;}}">
+class Component extends DCLogic {
+  state = {
+    hover: null, tool: 'click', selectedBuild: 'carrot',
+    storeOpen: false, storeTab: 'shop',
+    seen: { carrot: 1, lettuce: 1, wheat: 1, tomato: 1, plot: 1, flower: 1, pond: 1, rock: 1, coin: 1 },
+    coins: 220, gems: 3, day: 1, energy: 16, maxEnergy: 16, bloom: 1.4,
+    phase: 'day', night: { title: '', sub: '' },
+    toasts: [],
+  };
+
+  CROPS = {
+    carrot:  { name: 'Carrot',  cost: 4,  sell: 14, color: '#f0894a', leaf: '#83c250' },
+    lettuce: { name: 'Lettuce', cost: 10, sell: 38, color: '#8fce5e', leaf: '#b6e388' },
+    wheat:   { name: 'Wheat',   cost: 7,  sell: 26, color: '#eecf5f', leaf: '#d1ad5c' },
+    tomato:  { name: 'Tomato',  cost: 8,  sell: 30, color: '#ef6a4e', leaf: '#6cb04a' },
+  };
+  LAND = {
+    plot:   { name: 'Plot',   cost: 15,  kind: 'tilled', color: '#c69c6d' },
+    flower: { name: 'Flowers',cost: 30,  kind: 'flower', color: '#c9a6ff' },
+    pond:   { name: 'Pond',   cost: 90,  kind: 'pond',   color: '#8fd3e0' },
+    rock:   { name: 'Rock',   cost: 140, kind: 'rock',   color: '#b7ad93' },
+  };
+  STRUCT = {
+    sprinkler: { name: 'Sprinkler', cost: 60, color: '#6cc3de' },
+    scarecrow: { name: 'Scarecrow', cost: 45, color: '#c79a5a' },
+  };
+
+  componentDidMount() {
+    this.canvas = document.getElementById('farm-canvas');
+    if (!this.canvas) return;
+    this.ctx = this.canvas.getContext('2d');
+    this.fx = []; this.shake = 0; this._lt = null; this._tid = 0;
+    this.setupTiles();
+    this.resize();
+    this._rz = () => this.resize();
+    window.addEventListener('resize', this._rz);
+    this._mm = (e) => this.onMove(e);
+    this._ml = () => { this.hovKey = null; if (this.state.hover) this.setState({ hover: null }); };
+    this._cl = (e) => this.onClick(e);
+    this.canvas.addEventListener('mousemove', this._mm);
+    this.canvas.addEventListener('mouseleave', this._ml);
+    this.canvas.addEventListener('click', this._cl);
+    this._loop = (ms) => {
+      const time = ms / 1000;
+      if (this._lt == null) this._lt = time;
+      const dt = Math.min(0.05, time - this._lt); this._lt = time;
+      this.draw(time, dt);
+      this.raf = requestAnimationFrame(this._loop);
+    };
+    this.raf = requestAnimationFrame(this._loop);
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+    window.removeEventListener('resize', this._rz);
+    clearTimeout(this._t1); clearTimeout(this._t2);
+    if (this.canvas) { this.canvas.removeEventListener('mousemove', this._mm); this.canvas.removeEventListener('mouseleave', this._ml); this.canvas.removeEventListener('click', this._cl); }
+  }
+
+  setupTiles() {
+    let s = 1337; const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+    const layout = [
+      ['rock:', 'tilled:carrot:3:0', 'tilled:lettuce:2:0'],
+      ['tilled:wheat:3:0', 'tilled::0:0', 'tilled:tomato:1:0'],
+      ['pond:', 'grass:', 'flower:'],
+    ];
+    this.tiles = [];
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+      const parts = layout[r][c].split(':');
+      const kind = parts[0];
+      const crop = parts[1] || null;
+      const stage = parts[2] ? parseInt(parts[2]) : 0;
+      const watered = parts[3] === '1';
+      const spk = []; const n = kind === 'pond' ? 12 : 22;
+      for (let i = 0; i < n; i++) spk.push([rnd(), rnd(), rnd()]);
+      const spots = [];
+      for (const a of [0.32, 0.6]) for (const b of [0.32, 0.6]) spots.push([a, b, rnd() * 6.28]);
+      this.tiles.push({ r, c, kind, crop, stage, watered, wilted: false, structure: null, spk, spots, placeT: null, placeDone: true, popT: null });
+    }
+    this.amb = [];
+    for (let i = 0; i < 16; i++) this.amb.push({ x: Math.random(), y: Math.random(), sp: 0.02 + Math.random() * 0.04, ph: Math.random() * 6.28 });
+  }
+
+  resize() {
+    const c = this.canvas; if (!c) return;
+    const rect = c.parentElement.getBoundingClientRect();
+    this.cssW = rect.width; this.cssH = rect.height;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    c.width = Math.round(this.cssW * dpr); c.height = Math.round(this.cssH * dpr);
+    c.style.width = this.cssW + 'px'; c.style.height = this.cssH + 'px';
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.ctx.imageSmoothingEnabled = false;
+    const sc = Math.max(0.6, Math.min(1.1, this.cssW / 900));
+    this.tileW = 158 * sc; this.tileH = 80 * sc; this.D = 26 * sc; this.gap = 0; this.sc = sc;
+    this.HW = this.tileW / 2; this.QH = this.tileH / 2;
+    this.stepX = this.HW + this.gap; this.stepY = this.QH + this.gap / 2;
+    this.originX = this.cssW / 2;
+    this.originY = this.cssH * 0.5 - (2 * this.stepY);
+    for (const t of this.tiles) {
+      t.cx = this.originX + (t.c - t.r) * this.stepX;
+      t.cy = this.originY + (t.c + t.r) * this.stepY;
+    }
+  }
+
+  tileAt(mx, my) {
+    const sorted = [...this.tiles].sort((a, b) => (b.r + b.c) - (a.r + a.c));
+    for (const t of sorted) {
+      const dcx = mx - t.cx, dcy = my - (t.cy + this.QH);
+      if (Math.abs(dcx) / this.HW + Math.abs(dcy) / this.QH <= 1) return t;
+    }
+    return null;
+  }
+
+  onMove(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const t = this.tileAt(mx, my);
+    if (t) {
+      const nm = this.nameFor(t);
+      this.hovKey = t.r + '-' + t.c;
+      this.setState({ hover: { name: nm[0], sub: nm[1], mx, my } });
+    } else if (this.state.hover) { this.hovKey = null; this.setState({ hover: null }); }
+  }
+
+  nameFor(t) {
+    const st = t.structure ? ' · ' + this.STRUCT[t.structure].name : '';
+    if (t.kind === 'pond') return ['Fishing Pond', 'Click to cast for fish'];
+    if (t.kind === 'rock') return ['Rocky Outcrop', 'Click to mine ore & gems'];
+    if (t.kind === 'flower') return ['Wildflowers', 'Attracts pollinators · +bee boost'];
+    if (t.kind === 'grass') return ['Grassy Plot', 'Use Place to expand your land'];
+    if (t.kind === 'tilled') {
+      if (!t.crop) return ['Tilled Soil' + st, 'Use Build to plant a crop'];
+      const cd = this.CROPS[t.crop];
+      if (t.wilted) return [cd.name + ' (wilted)', 'Dried out · Click to clear'];
+      if (t.stage >= 3) return [cd.name + ' — ripe!' + st, 'Click to reap for ' + Math.round(cd.sell * this.state.bloom)];
+      return [cd.name + ' · stage ' + (t.stage + 1) + '/4' + st, t.structure === 'sprinkler' ? 'Auto-watered by sprinkler' : (t.watered ? 'Watered · grows tonight' : 'Click to water!')];
+    }
+    return ['Plot', ''];
+  }
+
+  onClick(e) {
+    if (this.state.phase !== 'day') return;
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const t = this.tileAt(mx, my);
+    if (!t) return;
+    this.applyTool(t, mx, my);
+    const nm = this.nameFor(t);
+    this.setState({ hover: { name: nm[0], sub: nm[1], mx, my } });
+  }
+
+  spend(n) {
+    if (this.state.energy < n) { this.toast('Out of energy — Sleep to rest', 'bad'); this.pulseSleep(); return false; }
+    this.setState(s => ({ energy: s.energy - n }));
+    return true;
+  }
+  pulseSleep() { this._sleepPulse = performance.now(); this.forceUpdate(); }
+
+  applyTool(t, mx, my) {
+    const tool = this.state.tool; const px = t.cx, py = t.cy + this.QH;
+    if (tool === 'click') this.clickTile(t, px, py);
+    else if (tool === 'build') this.buildDispatch(t, px, py);
+    this.forceUpdate();
+  }
+
+  buildDispatch(t, px, py) {
+    const sel = this.state.selectedBuild;
+    if (this.LAND[sel]) this.placeLand(t, px, py);
+    else this.buildOn(t, px, py);
+  }
+
+  markSeen(key) { if (!key || this.state.seen[key]) return; this.setState(s => ({ seen: Object.assign({}, s.seen, { [key]: 1 }) })); }
+
+  clickTile(t, px, py) {
+    if (t.kind === 'tilled' && t.crop && t.stage >= 3 && !t.wilted) {
+      const cd = this.CROPS[t.crop]; const gain = Math.round(cd.sell * this.state.bloom);
+      this.setState(s => ({ coins: s.coins + gain }));
+      t.crop = null; t.stage = 0; t.watered = false;
+      this.pop(t); this.burst(px, py - 8, cd.color, 16, 90); this.coinBurst(px, py - 10); this.floatText(px, py - 14, '+' + gain, 'coinBig'); this.addShake(3);
+      return;
+    }
+    if (t.kind === 'tilled' && t.crop && t.wilted) {
+      if (!this.spend(1)) return; t.crop = null; t.wilted = false; t.stage = 0; this.pop(t); this.burst(px, py, '#a08a63', 10); this.toast('Cleared', 'ok'); return;
+    }
+    if (t.kind === 'tilled' && t.crop && !t.wilted && t.stage < 3) {
+      if (t.structure === 'sprinkler') { this.nudge(t); this.toast('Sprinkler waters this', 'bad'); return; }
+      if (t.watered) { this.nudge(t); return; }
+      if (!this.spend(1)) return; t.watered = true; this.pop(t); this.splash(px, py); this.toast('Watered', 'ok'); return;
+    }
+    if (t.kind === 'pond') {
+      if (!this.spend(1)) return; const gain = 12 + Math.floor(Math.random() * 20);
+      this.setState(s => ({ coins: s.coins + gain })); this.markSeen('fish'); this.pop(t); this.splash(px, py); this.coinBurst(px, py - 8); this.floatText(px, py - 12, '+' + gain, 'coinBig'); this.addShake(2); this.toast('Caught a fish!', 'ok'); return;
+    }
+    if (t.kind === 'rock') {
+      if (!this.spend(1)) return; const gain = 8 + Math.floor(Math.random() * 12); const gem = Math.random() < 0.22 ? 1 : 0;
+      this.setState(s => ({ coins: s.coins + gain, gems: s.gems + gem })); this.markSeen('ore'); if (gem) this.markSeen('gem'); this.pop(t); this.burst(px, py - 6, '#cfc6ac', 12, 80); this.coinBurst(px, py - 8);
+      this.floatText(px, py - 12, '+' + gain, 'coinBig'); this.addShake(3); this.toast(gem ? 'Struck a gem! +1' : 'Mined ore', 'ok'); return;
+    }
+    this.nudge(t);
+    if (t.kind === 'grass') this.toast('Use Place to expand here', 'bad');
+    else if (t.kind === 'tilled' && !t.crop) this.toast('Use Build to plant', 'bad');
+  }
+
+  placeLand(t, px, py) {
+    if (t.kind !== 'grass') { this.nudge(t); this.toast('Place land on empty grass', 'bad'); return; }
+    const ld = this.LAND[this.state.selectedBuild];
+    if (this.state.coins < ld.cost) { this.toast('Not enough coins', 'bad'); return; }
+    if (!this.spend(1)) return;
+    this.setState(s => ({ coins: s.coins - ld.cost }));
+    t.kind = ld.kind; t.crop = null; t.stage = 0; t.watered = false; t.wilted = false; t.structure = null;
+    t.placeT = this._lt; t.placeDone = false;
+    this.markSeen(this.state.selectedBuild);
+    this.floatText(px, py - 14, '-' + ld.cost, 'coin'); this.addShake(4); this.toast('Placed ' + ld.name, 'ok');
+  }
+
+  buildOn(t, px, py) {
+    const sel = this.state.selectedBuild;
+    if (this.CROPS[sel]) {
+      if (t.kind !== 'tilled') { this.nudge(t); this.toast('Plant crops on soil', 'bad'); return; }
+      if (t.crop) { this.nudge(t); this.toast('Already planted', 'bad'); return; }
+      const cd = this.CROPS[sel];
+      if (this.state.coins < cd.cost) { this.toast('Not enough coins', 'bad'); return; }
+      if (!this.spend(1)) return;
+      this.setState(s => ({ coins: s.coins - cd.cost }));
+      t.crop = sel; t.stage = 0; t.watered = false; t.wilted = false; this.markSeen(sel);
+      this.pop(t); this.burst(px, py - 6, cd.leaf, 8); this.floatText(px, py - 10, '-' + cd.cost, 'coin'); this.toast('Planted ' + cd.name, 'ok');
+      return;
+    }
+    const stc = this.STRUCT[sel];
+    if (t.kind !== 'tilled') { this.nudge(t); this.toast(stc.name + ' goes on soil', 'bad'); return; }
+    if (t.structure) { this.nudge(t); this.toast('Already has ' + this.STRUCT[t.structure].name, 'bad'); return; }
+    if (this.state.coins < stc.cost) { this.toast('Not enough coins', 'bad'); return; }
+    if (!this.spend(1)) return;
+    this.setState(s => ({ coins: s.coins - stc.cost }));
+    t.structure = sel; t.placeT = this._lt; t.placeDone = false; this.markSeen(sel);
+    this.floatText(px, py - 14, '-' + stc.cost, 'coin'); this.addShake(3); this.toast('Built ' + stc.name, 'ok');
+  }
+
+  nudge(t) { t.nudgeT = this._lt; }
+  pop(t) { t.popT = this._lt; }
+  addShake(m) { this.shake = Math.max(this.shake, m); }
+
+  floatText(x, y, text, style) { this.fx.push({ type: 'text', x, y, vy: -34, text, style, life: 1.1, age: 0 }); }
+  toast(text, kind) {
+    const id = ++this._tid;
+    this.setState(s => ({ toasts: [...s.toasts.slice(-3), { id, text, kind }] }));
+    setTimeout(() => this.setState(s => ({ toasts: s.toasts.filter(t => t.id !== id) })), 1900);
+  }
+  burst(x, y, color, n, spd) {
+    spd = spd || 60;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * 6.28, v = spd * (0.4 + Math.random() * 0.7);
+      this.fx.push({ type: 'p', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, grav: 240, color, size: 2 + Math.random() * 3 * this.sc, life: 0.5 + Math.random() * 0.4, age: 0 });
+    }
+  }
+  splash(x, y) {
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.4, v = 50 + Math.random() * 50;
+      this.fx.push({ type: 'p', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, grav: 300, color: Math.random() > 0.5 ? '#6cc3de' : '#c6eef7', size: 2 + Math.random() * 2 * this.sc, life: 0.5 + Math.random() * 0.3, age: 0 });
+    }
+  }
+  coinBurst(x, y) {
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.8, v = 60 + Math.random() * 70;
+      this.fx.push({ type: 'coin', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, grav: 320, size: 4 * this.sc, life: 0.7 + Math.random() * 0.3, age: 0 });
+    }
+  }
+
+  onSleep() {
+    if (this.state.phase !== 'day') return;
+    this.setState({ phase: 'night', hover: null, night: { title: 'Night ' + this.state.day, sub: 'Watered crops are growing…' } });
+    let grew = 0, wilted = 0;
+    this._t1 = setTimeout(() => {
+      for (const t of this.tiles) {
+        if (t.kind === 'tilled' && t.crop && !t.wilted && t.stage < 3) {
+          const auto = t.structure === 'sprinkler';
+          if (t.watered || auto) { t.stage++; grew++; }
+          else if (t.structure === 'scarecrow') { /* protected: survives, no growth */ }
+          else { t.wilted = true; wilted++; }
+        }
+        t.watered = false;
+      }
+      const parts = [];
+      if (grew) parts.push(grew + ' grew');
+      if (wilted) parts.push(wilted + ' wilted');
+      this.setState(s => ({ day: s.day + 1, energy: s.maxEnergy, night: { title: 'Sunrise', sub: parts.length ? parts.join(' · ') : 'A quiet night on the farm' } }));
+      this.forceUpdate();
+    }, 1500);
+    this._t2 = setTimeout(() => {
+      this.setState({ phase: 'day' });
+      if (wilted) this.toast(wilted + ' crop' + (wilted > 1 ? 's' : '') + ' wilted!', 'bad');
+      else if (grew) this.toast(grew + ' crop' + (grew > 1 ? 's' : '') + ' grew', 'ok');
+    }, 3400);
+  }
+
+  // ---------- drawing ----------
+  r(x, y, w, h, col) { const c = this.ctx; c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
+  bounce(p) { if (p < 1 / 2.75) return 7.5625 * p * p; if (p < 2 / 2.75) { p -= 1.5 / 2.75; return 7.5625 * p * p + 0.75; } if (p < 2.5 / 2.75) { p -= 2.25 / 2.75; return 7.5625 * p * p + 0.9375; } p -= 2.625 / 2.75; return 7.5625 * p * p + 0.984375; }
+
+  draw(time, dt) {
+    const c = this.ctx; if (!c) return;
+    c.clearRect(0, 0, this.cssW, this.cssH);
+    const g = c.createRadialGradient(this.cssW * 0.82, this.cssH * 0.1, 10, this.cssW * 0.82, this.cssH * 0.1, this.cssW * 0.5);
+    g.addColorStop(0, 'rgba(255,248,215,.5)'); g.addColorStop(1, 'rgba(255,248,215,0)');
+    c.fillStyle = g; c.fillRect(0, 0, this.cssW, this.cssH);
+
+    c.save();
+    if (this.shake > 0.1) { c.translate((Math.random() * 2 - 1) * this.shake, (Math.random() * 2 - 1) * this.shake); this.shake = Math.max(0, this.shake - dt * 34); }
+
+    for (const p of this.amb) {
+      const px = p.x * this.cssW, py = this.cssH - ((p.y + time * p.sp) % 1) * this.cssH;
+      const a = 0.18 + 0.2 * Math.sin(time * 2 + p.ph);
+      c.fillStyle = 'rgba(255,244,200,' + a.toFixed(2) + ')'; c.fillRect(Math.round(px), Math.round(py), 3, 3);
+    }
+    const order = [...this.tiles].sort((a, b) => (a.r + a.c) - (b.r + b.c));
+    for (const t of order) this.drawTile(t, time);
+
+    // fx
+    for (let i = this.fx.length - 1; i >= 0; i--) {
+      const f = this.fx[i]; f.age += dt;
+      if (f.age >= f.life) { this.fx.splice(i, 1); continue; }
+      const k = 1 - f.age / f.life;
+      if (f.type === 'text') {
+        f.y += f.vy * dt;
+        c.globalAlpha = Math.min(1, k * 1.6);
+        c.font = (f.style === 'coinBig' ? 22 : 15) * this.sc + "px 'Pixelify Sans', monospace";
+        c.textAlign = 'center';
+        c.fillStyle = f.style === 'bad' ? '#d9563f' : (f.style && f.style.indexOf('coin') === 0 ? '#f5a623' : '#5a8f30');
+        c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.85)';
+        c.strokeText(f.text, f.x, f.y); c.fillText(f.text, f.x, f.y);
+        c.globalAlpha = 1; c.textAlign = 'left';
+      } else if (f.type === 'coin') {
+        f.vy += f.grav * dt; f.x += f.vx * dt; f.y += f.vy * dt;
+        c.globalAlpha = k;
+        c.fillStyle = '#f7c948'; c.fillRect(Math.round(f.x), Math.round(f.y), Math.round(f.size), Math.round(f.size));
+        c.fillStyle = '#fce9b0'; c.fillRect(Math.round(f.x), Math.round(f.y), Math.round(f.size), 1);
+        c.globalAlpha = 1;
+      } else {
+        f.vy += f.grav * dt; f.x += f.vx * dt; f.y += f.vy * dt;
+        c.globalAlpha = k; c.fillStyle = f.color;
+        c.fillRect(Math.round(f.x), Math.round(f.y), Math.round(f.size), Math.round(f.size)); c.globalAlpha = 1;
+      }
+    }
+    c.restore();
+  }
+
+  drawTile(t, time) {
+    const c = this.ctx, HW = this.HW, QH = this.QH, D = this.D, cx = t.cx;
+    let oy = t.cy;
+    const hovered = this.hovKey === (t.r + '-' + t.c) && this.state.phase === 'day';
+    if (hovered) oy -= 5;
+    let scale = 1;
+    if (t.nudgeT != null) { const p = (this._lt - t.nudgeT) / 0.22; if (p < 1) scale *= 1 - Math.sin(p * Math.PI) * 0.05; }
+    if (t.popT != null) { const p = (this._lt - t.popT) / 0.28; if (p < 1) scale *= 1 + Math.sin(p * Math.PI) * 0.13; }
+    if (t.placeT != null) {
+      const p = (time - t.placeT) / 0.6;
+      if (p < 1) { const b = this.bounce(p); oy -= (1 - b) * 120 * this.sc; scale *= 0.7 + 0.3 * b; }
+      else if (!t.placeDone) { t.placeDone = true; this.burst(cx, t.cy + QH, '#c9a56f', 16, 80); this.addShake(3); }
+    }
+
+    c.save();
+    const pivx = cx, pivy = oy + QH * 2;
+    c.translate(pivx, pivy); c.scale(scale, scale); c.translate(-pivx, -pivy);
+
+    const top = [cx, oy], right = [cx + HW, oy + QH], bot = [cx, oy + QH * 2], left = [cx - HW, oy + QH];
+    c.fillStyle = '#a4677d';
+    c.beginPath(); c.moveTo(bot[0], bot[1]); c.lineTo(right[0], right[1]); c.lineTo(right[0], right[1] + D); c.lineTo(bot[0], bot[1] + D); c.closePath(); c.fill();
+    c.fillStyle = '#ba879b';
+    c.beginPath(); c.moveTo(bot[0], bot[1]); c.lineTo(left[0], left[1]); c.lineTo(left[0], left[1] + D); c.lineTo(bot[0], bot[1] + D); c.closePath(); c.fill();
+    c.fillStyle = '#8f5468'; c.fillRect(Math.round(left[0]), Math.round(left[1] + D - 1), Math.round(HW * 2), 2);
+
+    const watered = t.kind === 'tilled' && t.crop && t.watered && !t.wilted;
+    let base = '#9ccb6e', dk = '#7cae4f', lt = '#c2e39a';
+    if (t.kind === 'tilled') { base = watered ? '#a87f52' : '#c69c6d'; dk = watered ? '#7f5c38' : '#a67c50'; lt = watered ? '#c39763' : '#dcbc90'; }
+    else if (t.kind === 'pond') { base = '#8fd3e0'; dk = '#68bad0'; lt = '#c1ebf3'; }
+    else if (t.kind === 'rock') { base = '#b7ad93'; dk = '#988c6f'; lt = '#d2c9af'; }
+    c.fillStyle = base;
+    c.beginPath(); c.moveTo(top[0], top[1]); c.lineTo(right[0], right[1]); c.lineTo(bot[0], bot[1]); c.lineTo(left[0], left[1]); c.closePath(); c.fill();
+    c.save(); c.clip();
+    for (const [a, b, k] of t.spk) {
+      const sx = cx + (a - b) * HW, sy = oy + (a + b) * QH;
+      c.fillStyle = k > 0.5 ? lt : dk;
+      const sz = t.kind === 'tilled' ? 3 : (2 + Math.round(k * 3));
+      c.fillRect(Math.round(sx), Math.round(sy), sz, Math.max(2, Math.round(sz * 0.6)));
+    }
+    if (t.kind === 'tilled') {
+      c.strokeStyle = 'rgba(90,60,30,.32)'; c.lineWidth = 2;
+      for (let i = 1; i < 4; i++) { const f = i / 4; c.beginPath(); c.moveTo(cx - HW + f * HW, oy + f * QH); c.lineTo(cx + f * HW, oy + QH + f * QH); c.stroke(); }
+    }
+    c.restore();
+
+    if (t.kind === 'pond') this.drawPond(cx, oy, time);
+    else if (t.kind === 'rock') this.drawRock(cx, oy);
+    else if (t.kind === 'flower') { for (const [a, b] of [[0.35, 0.4], [0.62, 0.66], [0.5, 0.28]]) this.drawFlower(cx + (a - b) * HW, oy + (a + b) * QH); }
+    else if (t.kind === 'tilled' && t.crop) {
+      for (const [a, b, ph] of t.spots) this.drawPlant(cx + (a - b) * HW, oy + (a + b) * QH, t.crop, t.stage, t.wilted, time, ph);
+      if (t.stage >= 3 && !t.wilted) { const bob = Math.sin(time * 3) * 2; this.drawSparkle(cx, oy - 6 + bob, time); }
+      if (watered) { const dy = Math.sin(time * 4) * 1; this.r(cx + HW * 0.5, oy + QH * 0.5 + dy, 3, 4, '#6cc3de'); }
+    }
+    if (t.structure) this.drawStructure(cx, oy, t.structure, time);
+
+    if (hovered) {
+      c.strokeStyle = 'rgba(255,255,255,.92)'; c.lineWidth = 2 + Math.sin(time * 6) * 0.6;
+      c.beginPath(); c.moveTo(top[0], top[1]); c.lineTo(right[0], right[1]); c.lineTo(bot[0], bot[1]); c.lineTo(left[0], left[1]); c.closePath(); c.stroke();
+    }
+    c.restore();
+  }
+
+  drawPlant(px, py, crop, stage, wilted, time, ph) {
+    const c = this.ctx; const M = this.sc * 1.6;
+    c.save(); c.translate(px, py); c.scale(M, M);
+    const rr = (x, y, w, h, col) => this.r(x, y, w, h, col);
+    const cd = this.CROPS[crop];
+    if (wilted) { rr(0.5, -5, 1.5, 5, '#9a8763'); rr(-3, -2, 6, 2, '#8a7a52'); rr(1.5, -6, 3, 2, '#9a8763'); c.restore(); return; }
+    if (stage === 0) { rr(-1, -3, 2, 3, '#6cb04a'); rr(-2.5, -4, 5, 2, cd.leaf); c.restore(); return; }
+    const H = stage === 1 ? 6 : stage === 2 ? 10 : 13;
+    const sway = Math.sin(time * 2 + ph) * 1.2;
+    rr(-1 + sway, -H, 2, H, '#5f9a3e');
+    rr(-3.5 + sway, -H - 2, 7, 3, cd.leaf);
+    rr(-2.5 + sway, -H + 3, 5, 3, cd.leaf);
+    if (stage >= 3) {
+      if (crop === 'carrot') { rr(-1.5, -1, 3, 3, cd.color); rr(-1, 2, 2, 2, '#e87b34'); }
+      else if (crop === 'wheat') { rr(-2 + sway, -H - 4, 4, 4, cd.color); }
+      else { rr(-4 + sway, -H, 3, 3, cd.color); rr(1.5 + sway, -H + 2, 3, 3, cd.color); }
+    }
+    c.restore();
+  }
+  drawSparkle(cx, cy, time) {
+    const s = this.sc, a = 0.5 + 0.5 * Math.sin(time * 5);
+    this.ctx.globalAlpha = a;
+    this.r(cx - 1, cy - 4, 2, 8 * s, '#fff6c8'); this.r(cx - 4, cy - 1, 8 * s, 2, '#fff6c8');
+    this.ctx.globalAlpha = 1;
+  }
+  drawFlower(px, py) {
+    const c = this.ctx; const M = this.sc * 1.5; c.save(); c.translate(px, py); c.scale(M, M);
+    const rr = (x, y, w, h, col) => this.r(x, y, w, h, col);
+    rr(-2, -2, 2, 2, '#fffdf5'); rr(1, -2, 2, 2, '#fffdf5'); rr(-2, 1, 2, 2, '#fffdf5'); rr(1, 1, 2, 2, '#fffdf5');
+    rr(-0.5, -0.5, 2, 2, '#f7c948');
+    c.restore();
+  }
+  drawPond(cx, oy, time) {
+    const s = this.sc, QH = this.QH; const rr = (x, y, w, h, col) => this.r(x, y, w * s, h * s, col);
+    const yb = oy + QH;
+    for (const [dx, dy, ph] of [[-14, -4, 0], [10, 2, 2], [-4, 8, 4]]) { const w = 5 + 2 * Math.sin(time * 2 + ph); rr(cx + dx, yb + dy, w, 1.6, 'rgba(255,255,255,.55)'); }
+    const fx = cx + Math.sin(time * 0.6) * 8 * s, fy = yb;
+    rr(fx - 4, fy - 2, 7, 4, '#f0894a'); rr(fx + 3, fy - 3, 3, 2, '#f0894a'); rr(fx + 3, fy + 1, 3, 2, '#f0894a'); rr(fx - 3, fy - 1, 1.5, 1.5, '#3a2a1a');
+  }
+  drawRock(cx, oy) {
+    const s = this.sc, QH = this.QH; const rr = (x, y, w, h, col) => this.r(x, y, w * s, h * s, col);
+    const yb = oy + QH;
+    rr(cx - 12, yb - 3, 12, 9, '#9a9078'); rr(cx - 12, yb - 5, 12, 3, '#c1b89e'); rr(cx - 12, yb + 5, 12, 2, '#7d745e');
+    rr(cx + 2, yb, 10, 7, '#8f8670'); rr(cx + 2, yb - 2, 10, 3, '#b3ab92');
+    rr(cx - 7, yb - 2, 2, 2, '#7fd3ff'); rr(cx + 6, yb + 1, 2, 2, '#c9a6ff');
+  }
+  drawStructure(cx, oy, kind, time) {
+    const c = this.ctx, QH = this.QH; const M = this.sc * 1.7; const yb = oy + QH;
+    c.save(); c.translate(cx, yb); c.scale(M, M);
+    const rr = (x, y, w, h, col) => this.r(x, y, w, h, col);
+    if (kind === 'sprinkler') {
+      rr(-1, -11, 2, 11, '#8a94a0'); rr(-2, -1, 4, 2, '#6b7480');
+      rr(-4, -13, 8, 3, '#aeb8c4'); rr(-4, -13, 8, 1, '#d6dde5');
+      const t2 = (time * 2.4) % 1;
+      rr(-7, -11 + t2 * 5, 1.6, 1.6, '#6cc3de'); rr(6, -11 + ((t2 + 0.5) % 1) * 5, 1.6, 1.6, '#6cc3de');
+    } else if (kind === 'scarecrow') {
+      rr(-0.7, -15, 1.6, 15, '#9a6a3b'); rr(-6, -11, 12, 1.8, '#9a6a3b');
+      rr(-3, -17, 6, 5, '#e0ba76'); rr(-3, -17, 6, 1.5, '#efd39a');
+      rr(-2, -15, 1.4, 1.4, '#3a2a1a'); rr(1, -15, 1.4, 1.4, '#3a2a1a');
+      rr(-3.5, -11, 7, 5, '#c25b4a'); rr(-3.5, -11, 7, 1.5, '#d97a68');
+      rr(-4.5, -18, 9, 2, '#b98a4a');
+    }
+    c.restore();
+  }
+
+  renderVals() {
+    const st = this.state;
+    const notch = "clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));";
+    const toolBase = "flex:1; min-width:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:11px 4px; border:none; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:13px;" + notch;
+    const toolOn = toolBase + "background:#ffe1a0; color:#8a5c14; box-shadow:inset 0 3px 0 rgba(255,255,255,.65), inset 0 -6px 0 rgba(150,100,20,.3), inset 0 0 0 3px #f0bd5e; filter:drop-shadow(0 6px 0 #d99f3e) drop-shadow(0 9px 6px rgba(120,80,20,.28));";
+    const toolOff = toolBase + "background:#efe0c2; color:#9a835f; box-shadow:inset 0 3px 0 rgba(255,255,255,.6), inset 0 -6px 0 rgba(120,90,40,.2), inset 0 0 0 3px #e0cca2; filter:drop-shadow(0 5px 0 #d8c39c);";
+    const T = (k) => st.tool === k ? toolOn : toolOff;
+
+    const hv = st.hover;
+    const hoverStyle = hv ? ("position:absolute; z-index:15; left:" + Math.min((this.cssW || 800) - 210, (hv.mx || 0) + 14) + "px; top:" + Math.max(8, (hv.my || 0) - 50) + "px; background:#fff8ec; box-shadow:inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a); padding:7px 12px; pointer-events:none; clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));") : "";
+
+    const chip = (on) => "display:flex; align-items:center; gap:6px; padding:7px 10px; border:none; cursor:pointer; font-family:'Fredoka',sans-serif; font-weight:600; color:#6b5236;" + notch + (on ? "background:#ffe1a0; box-shadow:inset 0 2px 0 rgba(255,255,255,.65), inset 0 -5px 0 rgba(150,100,20,.26), inset 0 0 0 3px #f0bd5e; filter:drop-shadow(0 5px 0 #d99f3e);" : "background:#efe0c2; box-shadow:inset 0 2px 0 rgba(255,255,255,.6), inset 0 -5px 0 rgba(120,90,40,.18), inset 0 0 0 3px #e0cca2; filter:drop-shadow(0 4px 0 #d8c39c);");
+    const buildOptions = [].concat(
+      Object.keys(this.CROPS).map(key => { const cd = this.CROPS[key]; return { key, name: cd.name, cost: cd.cost, color: cd.color, style: chip(st.selectedBuild === key), onPick: () => this.setState({ selectedBuild: key }) }; }),
+      Object.keys(this.STRUCT).map(key => { const sd = this.STRUCT[key]; return { key, name: sd.name, cost: sd.cost, color: sd.color, style: chip(st.selectedBuild === key), onPick: () => this.setState({ selectedBuild: key }) }; }),
+      Object.keys(this.LAND).map(key => { const ld = this.LAND[key]; return { key, name: ld.name, cost: ld.cost, color: ld.color, style: chip(st.selectedBuild === key), onPick: () => this.setState({ selectedBuild: key }) }; })
+    );
+
+    const seen = st.seen;
+    const tab = (on) => "padding:8px 15px; border:none; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:15px; color:" + (on ? '#6b5236' : '#b0996f') + "; background:" + (on ? '#ffe6bd' : '#f3e6cc') + "; box-shadow:inset 0 0 0 3px " + (on ? '#e6c489' : '#e7d6b4') + ";" + notch;
+    const gcard = "clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));";
+    const gicon = "clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));";
+    const gi = (key, name, color, desc) => { const on = !!seen[key]; return { key, name: on ? name : '? ? ?', color: on ? color : '#d7c8ac', desc: on ? desc : 'Not yet discovered', cardStyle: "display:flex; align-items:center; gap:9px; background:#fffaf0; box-shadow:inset 0 0 0 3px #f0e0c4; padding:9px 10px;" + gcard + (on ? '' : 'opacity:.5;'), iconStyle: "width:30px; height:30px; flex:none; background:" + (on ? color : '#d7c8ac') + "; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35);" + gicon }; };
+    const guide = [
+      { title: 'Crops', items: [ gi('carrot', 'Carrot', '#f0894a', 'Fast & cheap. Sells for 14.'), gi('lettuce', 'Lettuce', '#8fce5e', 'Premium greens. Sells for 38.'), gi('wheat', 'Wheat', '#eecf5f', 'Steady staple. Sells for 26.'), gi('tomato', 'Tomato', '#ef6a4e', 'Juicy vine crop. Sells for 30.') ] },
+      { title: 'Land & Features', items: [ gi('plot', 'Plot', '#c69c6d', 'Tilled soil, ready to plant.'), gi('flower', 'Wildflowers', '#c9a6ff', 'Attracts pollinators for a boost.'), gi('pond', 'Pond', '#8fd3e0', 'Click to fish for coins.'), gi('rock', 'Rock', '#b7ad93', 'Mine for ore & rare gems.') ] },
+      { title: 'Structures', items: [ gi('sprinkler', 'Sprinkler', '#6cc3de', 'Auto-waters its tile overnight.'), gi('scarecrow', 'Scarecrow', '#c79a5a', 'Keeps crops from wilting.') ] },
+      { title: 'Resources', items: [ gi('coin', 'Coins', '#f7c948', 'Spent on seeds, land & tools.'), gi('gem', 'Gems', '#a98bf0', 'Rare drop from mining rocks.'), gi('fish', 'Fish', '#f0894a', 'Caught at ponds for coins.'), gi('ore', 'Ore', '#b3ab92', 'Mined from rocky outcrops.') ] },
+    ];
+
+    const toasts = st.toasts.map(t => ({ id: t.id, text: t.text, style: "animation:fi-toast 1.9s ease-out forwards; font-family:'Pixelify Sans',monospace; font-size:14px; font-weight:600; padding:7px 14px; color:" + (t.kind === 'bad' ? '#fff' : '#4a3826') + "; background:" + (t.kind === 'bad' ? '#e07a5f' : '#fff7ea') + "; box-shadow:inset 0 0 0 3px " + (t.kind === 'bad' ? '#c85f47' : '#f3d698') + "; filter:drop-shadow(0 3px 0 rgba(120,80,20,.25));" + notch }));
+
+    const pulse = this._sleepPulse && (performance.now() - this._sleepPulse < 700);
+    const sleepStyle = "display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; width:66px; padding:9px 6px; border:none; background:#6d5ca8; color:#fff0b8; box-shadow:inset 0 3px 0 rgba(255,255,255,.3), inset 0 -6px 0 rgba(30,20,60,.42), inset 0 0 0 3px #8574c0; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:13px; filter:drop-shadow(0 6px 0 #463880) drop-shadow(0 9px 6px rgba(40,25,80,.32));" + (pulse ? "animation:fi-pulse .5s 2;" : "") + notch;
+
+    return {
+      hover: hv, hoverStyle,
+      coins: st.coins.toLocaleString(), gems: st.gems, day: st.day, bloomTxt: '×' + st.bloom,
+      energyTxt: st.energy + '/' + st.maxEnergy, energyPct: Math.round(st.energy / st.maxEnergy * 100) + '%',
+      toolClick: T('click'), toolBuild: T('build'),
+      onClickTool: () => this.setState({ tool: 'click' }),
+      onBuildTool: () => this.setState({ tool: 'build' }),
+      buildPicker: st.tool === 'build',
+      buildOptions, toasts,
+      onSleep: () => this.onSleep(), sleepStyle,
+      nightStyle: "position:absolute; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 40%, #35306a, #201b45 70%); transition:opacity .6s; pointer-events:" + (st.phase === 'night' ? 'auto' : 'none') + "; opacity:" + (st.phase === 'night' ? '1' : '0') + ";",
+      nightTitle: st.night.title, nightSub: st.night.sub,
+      shopOpen: st.shopOpen, upgradesOpen: st.upgradesOpen,
+      openShop: () => this.setState({ shopOpen: true }),
+      closeShop: () => this.setState({ shopOpen: false }),
+      openUpgrades: () => this.setState({ upgradesOpen: true }),
+      closeUpgrades: () => this.setState({ upgradesOpen: false }),
+      storeOpen: st.storeOpen, storeTab: st.storeTab,
+      isShop: st.storeTab === 'shop', isBoost: st.storeTab === 'boost', isGuide: st.storeTab === 'guide',
+      tabShopStyle: tab(st.storeTab === 'shop'), tabBoostStyle: tab(st.storeTab === 'boost'), tabGuideStyle: tab(st.storeTab === 'guide'),
+      openStore: () => this.setState({ storeOpen: true }),
+      closeStore: () => this.setState({ storeOpen: false }),
+      showShop: () => this.setState({ storeTab: 'shop' }),
+      showBoost: () => this.setState({ storeTab: 'boost' }),
+      showGuide: () => this.setState({ storeTab: 'guide' }),
+      guide,
+      stop: (e) => e.stopPropagation(),
+      shopItems: [
+        { name: 'Star Lettuce', tag: 'Seed · Rare', color: '#8fce5e', desc: 'Sells for far more than carrots.', price: '120' },
+        { name: 'Golden Wheat', tag: 'Seed · Rare', color: '#eecf5f', desc: 'Slow, but stacks with Bloom boost.', price: '90' },
+        { name: 'Fishing Rod', tag: 'Tool', color: '#6cc3de', desc: 'Cast at ponds to catch fish.', price: '400' },
+        { name: 'Iron Pickaxe', tag: 'Tool', color: '#b7ad93', desc: 'Break rocks for ore & gems.', price: '650' },
+        { name: 'Pond Tile', tag: 'Land', color: '#8fd3e0', desc: 'Also placeable via the Build tool.', price: '90' },
+        { name: 'Rock Tile', tag: 'Land', color: '#b7ad93', desc: 'Also placeable via the Build tool.', price: '140' },
+      ],
+      upgrades: [
+        { name: 'Auto-Harvester', level: 'Lv 2', color: '#eecf5f', desc: 'Collects ripe crops for you every 8s.', price: '150' },
+        { name: 'Sprinkler System', level: 'Lv 1', color: '#8fd3e0', desc: 'Auto-waters all tiles overnight.', price: '220' },
+        { name: 'Rich Fertilizer', level: 'Lv 3', color: '#c69c6d', desc: 'Feed advances two stages at once.', price: '180' },
+        { name: 'Extra Energy', level: 'Lv 1', color: '#f5a623', desc: '+4 clicks each day.', price: '260' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

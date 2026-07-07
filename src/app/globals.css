@@ -1,0 +1,143 @@
+@import 'tailwindcss';
+
+/* Map Tailwind's font utilities onto the Google faces loaded in layout.tsx.
+   font-sans = Fredoka (cozy UI), font-pixel = Pixelify Sans (numerals/labels). */
+@theme {
+  --font-sans: var(--font-fredoka), ui-sans-serif, system-ui, sans-serif;
+  --font-pixel: var(--font-pixelify), ui-monospace, monospace;
+}
+
+/* ── Little Acre design tokens ──
+   Warm pastel palette lifted from the prototype (docs/design/prototype/).
+   Recolour the board through src/lib/renderer/palette.ts, not here. */
+:root {
+  /* page backdrop gradient (sky → meadow → sand) */
+  --la-sky-top: #d8edf2;
+  --la-sky-mid: #e7f2e4;
+  --la-sky-bottom: #fbeecb;
+
+  /* HUD panel woodgrain / parchment */
+  --la-panel: #fdf3e0;
+  --la-panel-soft: #fff7ea;
+  --la-panel-line: #e7cfa5;
+
+  /* currencies */
+  --la-coin: #f7c948;
+  --la-coin-text: #c08a1e;
+  --la-gem: #a98bf0;
+  --la-gem-text: #8a63e0;
+  --la-energy: #f5b23c;
+
+  /* accents */
+  --la-leaf: #aadd85;
+  --la-leaf-text: #3a5c1f;
+  --la-sleep: #6d5ca8;
+  --la-text: #6b5236;
+  --la-muted: #a08a6c;
+  --la-danger: #e07a5f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(
+    var(--la-sky-top) 0%,
+    var(--la-sky-mid) 48%,
+    var(--la-sky-bottom) 100%
+  );
+  color: var(--la-text);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+.font-pixel {
+  font-family: var(--font-pixel);
+}
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+/* Chunky rounded-pixel notch used on every HUD chip & button. */
+.la-notch {
+  clip-path: polygon(
+    0 4px,
+    4px 4px,
+    4px 0,
+    calc(100% - 4px) 0,
+    calc(100% - 4px) 4px,
+    100% 4px,
+    100% calc(100% - 4px),
+    calc(100% - 4px) calc(100% - 4px),
+    calc(100% - 4px) 100%,
+    4px 100%,
+    4px calc(100% - 4px),
+    0 calc(100% - 4px)
+  );
+}
+
+@keyframes la-pop {
+  0% {
+    transform: scale(0.9) translateY(6px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes la-toast {
+  0% {
+    transform: translateY(10px) scale(0.9);
+    opacity: 0;
+  }
+  12% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+}
+@keyframes la-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+@keyframes la-stars {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .la-anim {
+    animation: none !important;
+  }
+}
