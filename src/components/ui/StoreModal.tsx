@@ -114,6 +114,7 @@ export function StoreModal() {
   const closeStore = useGameStore((s) => s.closeStore);
   const setStoreTab = useGameStore((s) => s.setStoreTab);
   const rebloom = useGameStore((s) => s.rebloom);
+  const goMenu = useGameStore((s) => s.goMenu);
 
   if (!open) return null;
 
@@ -134,13 +135,21 @@ export function StoreModal() {
               <Tab key={t} label={t} on={tab === t} onClick={() => setStoreTab(t)} />
             ))}
           </div>
-          <button
-            onClick={closeStore}
-            className="la-notch h-[34px] w-[34px] bg-[#fff1dd] text-base text-[#a0895f] shadow-[inset_0_0_0_3px_#e7cfa5]"
-            aria-label="Close store"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={goMenu}
+              className="la-notch h-[34px] px-3 font-pixel text-[13px] font-semibold text-[#a0895f] bg-[#fff1dd] shadow-[inset_0_0_0_3px_#e7cfa5] active:translate-y-0.5"
+            >
+              Exit to Menu
+            </button>
+            <button
+              onClick={closeStore}
+              className="la-notch h-[34px] w-[34px] bg-[#fff1dd] text-base text-[#a0895f] shadow-[inset_0_0_0_3px_#e7cfa5]"
+              aria-label="Close store"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {tab === 'shop' && (

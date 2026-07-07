@@ -266,8 +266,31 @@ Trade-offs — what this makes easier or harder.
 
 > **Update this section at the end of every session** — what shipped, what's next.
 
-- **Phase:** M0 scaffold shipped; M2 economy underway (crops + real upgrade purchases landed).
-- **This session (2026-07-07): real Store purchases — buyable upgrades** (branch
+- **Phase:** M0 scaffold shipped; M2 economy underway (crops + real upgrade purchases landed);
+  **Modes shipped** — Main Menu + Freeplay + 3 tutorial Puzzles (DESIGN.md §3).
+- **This session (2026-07-07): Main Menu + Freeplay + tutorial Puzzles** (branch
+  `feature/menu-puzzles`, PR after #2). The app now boots to a cozy **Main Menu** (Freeplay /
+  Puzzles, Settings reserved) via new store app-state `screen: 'menu' | 'puzzleSelect' | 'game'` +
+  `mode: 'freeplay' | 'puzzle'`; `App.tsx` renders MainMenu / PuzzleSelect / Game by `screen` and
+  calls `init()` once (loads save + puzzle stars, lands on menu — no longer forces into the game).
+  New pure **`src/lib/game/puzzles.ts`** (Vitest-tested): `PuzzleDef` + `PUZZLES` (3 tutorials —
+  first-sprout / dry-spell / vine-and-again teaching the loop / watering discipline / re-yield),
+  `starsFor`, and pure reducers `registerHarvest` / `registerNight` (+ `isPuzzleUnlocked`). Puzzles
+  are **ephemeral**: `startPuzzle(id)` sets up a fresh board/coins/energy from the def; harvest
+  tracking hooks the ripe branch of `clickTile` (`trackPuzzleHarvest` → win + best-stars persist),
+  night tracking hooks `sleep`'s grow-resolve (`registerNight` → loss past `nightLimit`). **Freeplay
+  save is never touched by a puzzle** — `store.save()` no-ops when `mode==='puzzle'` and `loop.ts`
+  autosave skips too; best stars live in a **separate** key `little-acre-puzzles`
+  (`loadPuzzleStars`/`savePuzzleStars`). Sequential unlock (puzzle N needs ≥1★ on N-1). New UI:
+  `MainMenu`, `PuzzleSelect` (cards + best-stars + lock), `PuzzleOverlays` (ObjectiveBanner /
+  PuzzleIntro blurb card / PuzzleResult win-lose modal with Retry/Puzzles/Next). BuildPicker
+  restricts to `puzzle.builds` in puzzle mode; Store button hidden in puzzle mode (puzzles are
+  self-contained); Freeplay gets an **Exit to Menu** in the StoreModal header. Star thresholds ship
+  as authored — all three verified feasible at par = optimal nights (no tuning needed). No
+  SAVE_VERSION bump (freeplay schema unchanged; puzzle stars are a new separate key).
+  lint/type-check/build clean, **52 tests** green (+21). See `docs/work/2026-07-07-menu-puzzles.md`.
+  **Next:** puzzles P3–P5 (need processing/crafting), settings screen, animated star fill.
+- **Prior session (2026-07-07): real Store purchases — buyable upgrades** (branch
   `feature/shop-upgrades`, PR after #1). The Store's **Boost** tab is now a real economy: new pure
   `src/lib/game/upgrades.ts` (data-driven `UPGRADE_DEFS` + geometric `upgradeCost` + derived
   `maxEnergyFor`/`harvestMultFor` + `normalizeUpgrades`) drives two levelled upgrades — **Extra

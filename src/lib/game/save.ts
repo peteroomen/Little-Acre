@@ -13,6 +13,8 @@ import { normalizeUpgrades, type UpgradeLevels } from './upgrades';
  */
 export const SAVE_VERSION = 3;
 const SAVE_KEY = 'little-acre-v1';
+/** Puzzle best-stars live in their OWN key so an ephemeral puzzle never touches the farm save. */
+const PUZZLE_KEY = 'little-acre-puzzles';
 
 export interface SaveState {
   version: number;
@@ -51,6 +53,35 @@ export function loadGame(): SaveState | null {
 export function clearSave(): void {
   if (typeof localStorage === 'undefined') return;
   localStorage.removeItem(SAVE_KEY);
+}
+
+/** Best stars earned per puzzle id. Persisted separately from the Freeplay farm save. */
+export function loadPuzzleStars(): Record<string, number> {
+  if (typeof localStorage === 'undefined') return {};
+  const raw = localStorage.getItem(PUZZLE_KEY);
+  if (!raw) return {};
+  try {
+    const data = JSON.parse(raw) as { puzzleStars?: unknown };
+    const src = data && typeof data.puzzleStars === 'object' ? data.puzzleStars : null;
+    if (!src) return {};
+    const out: Record<string, number> = {};
+    for (const [id, v] of Object.entries(src as Record<string, unknown>)) {
+      if (typeof v === 'number' && Number.isFinite(v))
+        out[id] = Math.max(0, Math.min(3, Math.floor(v)));
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function savePuzzleStars(puzzleStars: Record<string, number>): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(PUZZLE_KEY, JSON.stringify({ puzzleStars }));
+  } catch {
+    // Non-fatal — best stars are a nicety, not run state.
+  }
 }
 
 /**
