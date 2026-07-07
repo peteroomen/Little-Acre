@@ -6,6 +6,7 @@ import {
   LAND,
   STRUCT,
   createBoard,
+  harvestPatch,
   harvestValue,
   isCrop,
   isLand,
@@ -124,12 +125,13 @@ export const useGameStore = create<GameState>((set, get) => {
 
   const clickTile = (t: Tile): ActionResult => {
     const { r, c } = t;
-    // Harvest a ripe crop — free (no energy), the payoff moment.
+    // Harvest a ripe crop — free (no energy), the payoff moment. Re-yield crops re-ripen
+    // instead of clearing (see harvestPatch).
     if (isRipe(t)) {
       const crop = t.crop!;
       const gain = harvestValue(crop, get().bloom);
       set((s) => ({ coins: s.coins + gain }));
-      patchTile(r, c, { crop: null, stage: 0, watered: false });
+      patchTile(r, c, harvestPatch(t));
       return { fx: 'harvest', r, c, gain, color: CROPS[crop].color };
     }
     // Clear a wilted crop (costs energy).
@@ -195,6 +197,7 @@ export const useGameStore = create<GameState>((set, get) => {
       kind: ld.kind,
       crop: null,
       stage: 0,
+      harvests: 0,
       watered: false,
       wilted: false,
       structure: null,
@@ -223,7 +226,7 @@ export const useGameStore = create<GameState>((set, get) => {
       }
       if (!spend(1)) return NONE;
       set((s) => ({ coins: s.coins - cd.cost }));
-      patchTile(r, c, { crop: sel, stage: 0, watered: false, wilted: false });
+      patchTile(r, c, { crop: sel, stage: 0, harvests: 0, watered: false, wilted: false });
       markSeen(sel);
       get().toast(`Planted ${cd.name}`, 'ok');
       return { fx: 'plant', r, c, cost: cd.cost, color: cd.leaf };
@@ -269,8 +272,7 @@ export const useGameStore = create<GameState>((set, get) => {
     sleepPulse: 0,
     seen: {
       carrot: 1,
-      lettuce: 1,
-      wheat: 1,
+      potato: 1,
       tomato: 1,
       plot: 1,
       flower: 1,

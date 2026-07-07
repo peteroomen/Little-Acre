@@ -87,10 +87,14 @@ const GUIDE: {
   {
     title: 'Crops',
     items: [
-      { key: 'carrot', name: 'Carrot', color: '#f0894a', desc: 'Fast & cheap. Sells for 14.' },
-      { key: 'lettuce', name: 'Lettuce', color: '#8fce5e', desc: 'Premium greens. Sells for 38.' },
-      { key: 'wheat', name: 'Wheat', color: '#eecf5f', desc: 'Steady staple. Sells for 26.' },
-      { key: 'tomato', name: 'Tomato', color: '#ef6a4e', desc: 'Juicy vine crop. Sells for 30.' },
+      { key: 'carrot', name: 'Carrot', color: '#f0894a', desc: 'Cheap & fast — ripe in 2 nights.' },
+      { key: 'potato', name: 'Potato', color: '#c49a5c', desc: 'Reliable staple — 3 nights.' },
+      {
+        key: 'tomato',
+        name: 'Tomato',
+        color: '#ef6a4e',
+        desc: 'Plant once, re-harvest 3× on the vine.',
+      },
     ],
   },
   {
