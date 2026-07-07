@@ -266,8 +266,23 @@ Trade-offs — what this makes easier or harder.
 
 > **Update this section at the end of every session** — what shipped, what's next.
 
-- **Phase:** M0 scaffold shipped (this bootstrap import).
-- **This session (2026-07-07): project scaffold — M0 board + day loop.** Created the
+- **Phase:** M0 scaffold shipped; M2 economy started (first content slice landed).
+- **This session (2026-07-07): Tier-1 crop roles — grow times + re-yield** (branch
+  `feature/tier1-crop-roles`). Replaced the prototype's four look-alike crops (all fixed 3-night
+  grow) with the designed **Tier-1 set**: **Carrot** (4c, 2 nights, sell 20 — bootstrap),
+  **Potato** (6c, 3 nights, 34 — staple), **Tomato** (12c, 4 nights, 18 — _re-yields 3× on the
+  vine_, regrows every 2 nights). `stage` now counts watered nights `0..grow` (ripe at
+  `stage >= cropGrow(crop)`), not a fixed 3; `CropDef` gained `grow`/`reyield`/`regrow`, `Tile`
+  gained `harvests`. New pure helpers `cropGrow`, `visualStage` (maps growth → the 4 sprite
+  stages so the renderer stays free of crop rules), and `harvestPatch` (re-yield: re-ripens until
+  `reyield` harvests are spent, then clears). Renderer draws via `visualStage`/`isRipe`; ripe body
+  differentiates root veg (carrot/potato) vs vine fruit (tomato). Save **v2** — `normalizeTile`
+  backfills `harvests` and clears any crop id no longer in `CROPS` (old wheat/lettuce). Numbers
+  mirror `scripts/little-acre-model.mjs` (tunable). lint/type-check/build clean, **25 tests** green
+  (+5: per-crop grow, re-yield loop, visualStage, save normalisation). See
+  `docs/work/2026-07-07-tier1-crop-roles.md`. **Next:** real Shop purchases (seeds/tools),
+  gathering throttle (pond stock/rock respawn), then Tier-2 crops + tool tiers.
+- **Prior session (2026-07-07): project scaffold — M0 board + day loop.** Created the
   Next 16 / React 19 / TS-strict / Tailwind v4 / Zustand / Vitest project, mirroring the
   Disaster Co. tooling but with a **Canvas2D** renderer (no Pixi). Ported the
   `Farm Idle.dc.html` prototype into a clean, typed slice: the iso board renders (grass /

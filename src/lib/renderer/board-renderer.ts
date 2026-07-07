@@ -22,7 +22,7 @@ import {
   TILE_SIDE,
   TILE_TOP,
 } from './palette';
-import type { CropId, StructId, Tile } from '../game/tiles';
+import { isRipe, visualStage, type CropId, type StructId, type Tile } from '../game/tiles';
 
 export interface BoardSnapshot {
   board: Tile[];
@@ -518,8 +518,16 @@ export class BoardRenderer {
         this.drawFlower(cx + (a - b) * HW, oy + (a + b) * QH);
     else if (t.kind === 'tilled' && t.crop) {
       for (const [a, b, ph] of g.spots)
-        this.drawPlant(cx + (a - b) * HW, oy + (a + b) * QH, t.crop, t.stage, t.wilted, time, ph);
-      if (t.stage >= 3 && !t.wilted) {
+        this.drawPlant(
+          cx + (a - b) * HW,
+          oy + (a + b) * QH,
+          t.crop,
+          visualStage(t),
+          t.wilted,
+          time,
+          ph,
+        );
+      if (isRipe(t)) {
         const bob = Math.sin(time * 3) * 2;
         this.drawSparkle(cx, oy - 6 + bob, time);
       }
@@ -580,12 +588,12 @@ export class BoardRenderer {
     rr(-3.5 + sway, -H - 2, 7, 3, cd.leaf);
     rr(-2.5 + sway, -H + 3, 5, 3, cd.leaf);
     if (stage >= 3) {
-      if (crop === 'carrot') {
+      if (crop === 'carrot' || crop === 'potato') {
+        // root veg peeking from the soil
         rr(-1.5, -1, 3, 3, cd.color);
-        rr(-1, 2, 2, 2, '#e87b34');
-      } else if (crop === 'wheat') {
-        rr(-2 + sway, -H - 4, 4, 4, cd.color);
+        rr(-1, 2, 2, 2, crop === 'carrot' ? '#e87b34' : '#a97e42');
       } else {
+        // tomato — fruit on the vine
         rr(-4 + sway, -H, 3, 3, cd.color);
         rr(1.5 + sway, -H + 2, 3, 3, cd.color);
       }
@@ -688,7 +696,6 @@ export class BoardRenderer {
 /** Crop body/leaf accents, kept beside the renderer (drawing detail, not game logic). */
 const CROP_COLORS: Record<CropId, { color: string; leaf: string }> = {
   carrot: { color: '#f0894a', leaf: '#83c250' },
-  lettuce: { color: '#8fce5e', leaf: '#b6e388' },
-  wheat: { color: '#eecf5f', leaf: '#d1ad5c' },
+  potato: { color: '#c49a5c', leaf: '#6fae52' },
   tomato: { color: '#ef6a4e', leaf: '#6cb04a' },
 };

@@ -1,12 +1,15 @@
-import { createBoard, type Tile } from './tiles';
+import { CROPS, createBoard, type CropId, type Tile } from './tiles';
 
 /**
  * Versioned localStorage save. Bump SAVE_VERSION when the shape changes and add a
  * migration branch in `parseSave`. Offline handling is a stub for M0 (Little Acre's
  * day/night advances only on an explicit Sleep, so there's no passive accrual to bank
  * yet) — see docs/ROADMAP.md M2/M3 for the idle question.
+ *
+ * v2: tiles gained `harvests` (re-yield); the Tier-1 crop set replaced the prototype's
+ * crops, so any unknown crop id from an older save is cleared by `normalizeTile`.
  */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 const SAVE_KEY = 'little-acre-v1';
 
 export interface SaveState {
@@ -55,7 +58,9 @@ export function parseSave(data: unknown): SaveState | null {
   if (!data || typeof data !== 'object') return null;
   const d = data as Partial<SaveState>;
   const board =
-    Array.isArray(d.board) && d.board.length === 9 ? (d.board as Tile[]) : createBoard();
+    Array.isArray(d.board) && d.board.length === 9
+      ? (d.board as Partial<Tile>[]).map(normalizeTile)
+      : createBoard();
   return {
     version: SAVE_VERSION,
     coins: numOr(d.coins, 220),
@@ -72,4 +77,25 @@ export function parseSave(data: unknown): SaveState | null {
 
 function numOr(v: unknown, fallback: number): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+}
+
+/**
+ * Coerce a persisted tile into the current shape: default `harvests`, and clear any crop id
+ * that no longer exists in CROPS (e.g. the prototype's wheat/lettuce) so it doesn't render or
+ * harvest as a ghost.
+ */
+function normalizeTile(raw: Partial<Tile>): Tile {
+  const cropValid = typeof raw.crop === 'string' && raw.crop in CROPS;
+  const crop = cropValid ? (raw.crop as CropId) : null;
+  return {
+    r: numOr(raw.r, 0),
+    c: numOr(raw.c, 0),
+    kind: raw.kind ?? 'grass',
+    crop,
+    stage: crop ? numOr(raw.stage, 0) : 0,
+    harvests: crop ? numOr(raw.harvests, 0) : 0,
+    watered: !!raw.watered,
+    wilted: crop ? !!raw.wilted : false,
+    structure: raw.structure ?? null,
+  };
 }

@@ -52,4 +52,18 @@ describe('parseSave', () => {
     expect(parsed!.coins).toBe(220);
     expect(parsed!.gems).toBe(3);
   });
+
+  it('normalises tiles: clears crops no longer in CROPS and backfills harvests (v1→v2)', () => {
+    const board = createBoard().map((t) => ({ ...t }));
+    // an old prototype crop that no longer exists, plus a tile missing the new `harvests` field
+    (board[1] as unknown as { crop: string }).crop = 'wheat';
+    delete (board[1] as Partial<{ harvests: number }>).harvests;
+    const parsed = parseSave({ board });
+    expect(parsed!.board[1].crop).toBeNull();
+    expect(parsed!.board[1].stage).toBe(0);
+    expect(parsed!.board[1].harvests).toBe(0);
+    // a valid crop tile keeps its data and gains a defaulted harvests
+    expect(parsed!.board[5].crop).toBe('tomato');
+    expect(parsed!.board[5].harvests).toBe(0);
+  });
 });
