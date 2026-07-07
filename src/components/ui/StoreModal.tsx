@@ -1,9 +1,10 @@
 'use client';
 
 import { useGameStore, type StoreTab } from '@/lib/game/store';
+import { isMaxed, UPGRADE_DEFS, UPGRADE_IDS, upgradeCost } from '@/lib/game/upgrades';
 
-// Shop / Boost content is presentational for M0 — the real economy (buyable seeds,
-// tools, upgrades) is still being modelled. See docs/design/GDD.md "Open questions".
+// The Boost tab is a real economy (see below). The Shop tab stays presentational — its
+// tools/seeds are gated on the tool system + Tier-2 unlocks (later slices).
 const SHOP_ITEMS = [
   {
     name: 'Star Lettuce',
@@ -46,37 +47,6 @@ const SHOP_ITEMS = [
     color: '#b7ad93',
     desc: 'Also placeable via the Build tool.',
     price: '140',
-  },
-];
-
-const UPGRADES = [
-  {
-    name: 'Auto-Harvester',
-    level: 'Lv 2',
-    color: '#eecf5f',
-    desc: 'Collects ripe crops for you every 8s.',
-    price: '150',
-  },
-  {
-    name: 'Sprinkler System',
-    level: 'Lv 1',
-    color: '#8fd3e0',
-    desc: 'Auto-waters all tiles overnight.',
-    price: '220',
-  },
-  {
-    name: 'Rich Fertilizer',
-    level: 'Lv 3',
-    color: '#c69c6d',
-    desc: 'Feed advances two stages at once.',
-    price: '180',
-  },
-  {
-    name: 'Extra Energy',
-    level: 'Lv 1',
-    color: '#f5a623',
-    desc: '+4 clicks each day.',
-    price: '260',
   },
 ];
 
@@ -138,6 +108,9 @@ export function StoreModal() {
   const open = useGameStore((s) => s.storeOpen);
   const tab = useGameStore((s) => s.storeTab);
   const seen = useGameStore((s) => s.seen);
+  const coins = useGameStore((s) => s.coins);
+  const upgrades = useGameStore((s) => s.upgrades);
+  const buyUpgrade = useGameStore((s) => s.buyUpgrade);
   const closeStore = useGameStore((s) => s.closeStore);
   const setStoreTab = useGameStore((s) => s.setStoreTab);
   const rebloom = useGameStore((s) => s.rebloom);
@@ -199,24 +172,44 @@ export function StoreModal() {
 
         {tab === 'boost' && (
           <div className="flex flex-col gap-2.5 px-4 pb-3.5 pt-1">
-            {UPGRADES.map((up) => (
-              <div
-                key={up.name}
-                className="la-notch flex items-center gap-3 bg-[#fffaf0] px-3.5 py-3 shadow-[inset_0_0_0_3px_#f0e0c4]"
-              >
-                <span className="la-notch h-10 w-10 flex-none" style={{ background: up.color }} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[15px] font-semibold text-[#5a462f]">{up.name}</span>
-                    <span className="font-pixel text-xs text-[#c46d38] bg-[#ffe6cf] px-1.5 py-px">
-                      {up.level}
-                    </span>
+            {UPGRADE_IDS.map((id) => {
+              const def = UPGRADE_DEFS[id];
+              const level = upgrades[id];
+              const maxed = isMaxed(id, level);
+              const cost = upgradeCost(id, level);
+              const afford = coins >= cost;
+              return (
+                <div
+                  key={id}
+                  className="la-notch flex items-center gap-3 bg-[#fffaf0] px-3.5 py-3 shadow-[inset_0_0_0_3px_#f0e0c4]"
+                >
+                  <span
+                    className="la-notch h-10 w-10 flex-none"
+                    style={{ background: def.color }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[15px] font-semibold text-[#5a462f]">{def.name}</span>
+                      <span className="font-pixel text-xs text-[#c46d38] bg-[#ffe6cf] px-1.5 py-px">
+                        Lv {level}
+                        {def.maxLevel ? ` / ${def.maxLevel}` : ''}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-xs text-[#7a6547]">
+                      {level > 0 ? `${def.effect(level)} · ` : ''}
+                      {maxed ? def.desc : `next: ${def.effect(level + 1)}`}
+                    </div>
                   </div>
-                  <div className="mt-0.5 text-xs text-[#7a6547]">{up.desc}</div>
+                  <PriceButton
+                    price={maxed ? 'MAX' : String(cost)}
+                    amber
+                    hideCoin={maxed}
+                    disabled={maxed || !afford}
+                    onClick={() => buyUpgrade(id)}
+                  />
                 </div>
-                <PriceButton price={up.price} amber />
-              </div>
-            ))}
+              );
+            })}
             <div className="la-notch mt-1.5 flex items-center gap-3 bg-[#efe4ff] p-3.5 shadow-[inset_0_0_0_3px_#d3bff2]">
               <span className="h-10 w-10 flex-none rotate-45 bg-[var(--la-gem)] shadow-[inset_0_0_0_3px_#c3aef8]" />
               <div className="min-w-0 flex-1">
@@ -295,16 +288,32 @@ function Tab({ label, on, onClick }: { label: string; on: boolean; onClick: () =
   );
 }
 
-function PriceButton({ price, amber }: { price: string; amber?: boolean }) {
+function PriceButton({
+  price,
+  amber,
+  onClick,
+  disabled,
+  hideCoin,
+}: {
+  price: string;
+  amber?: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
+  hideCoin?: boolean;
+}) {
   return (
     <button
-      className={`la-notch mt-auto flex items-center justify-center gap-1.5 px-3 py-2 font-pixel text-sm font-semibold active:translate-y-0.5 ${
+      onClick={onClick}
+      disabled={disabled}
+      className={`la-notch mt-auto flex items-center justify-center gap-1.5 px-3 py-2 font-pixel text-sm font-semibold active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45 disabled:active:translate-y-0 ${
         amber
           ? 'bg-[#ffd79b] text-[#7a4a12] shadow-[inset_0_0_0_3px_#ffe6bd]'
           : 'bg-[var(--la-leaf)] text-[var(--la-leaf-text)] shadow-[inset_0_0_0_3px_#bfe89b]'
       }`}
     >
-      <span className="h-3.5 w-3.5 bg-[var(--la-coin)] shadow-[inset_0_0_0_2px_#fce9b0]" />
+      {!hideCoin && (
+        <span className="h-3.5 w-3.5 bg-[var(--la-coin)] shadow-[inset_0_0_0_2px_#fce9b0]" />
+      )}
       {price}
     </button>
   );

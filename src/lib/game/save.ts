@@ -1,4 +1,5 @@
 import { CROPS, createBoard, type CropId, type Tile } from './tiles';
+import { normalizeUpgrades, type UpgradeLevels } from './upgrades';
 
 /**
  * Versioned localStorage save. Bump SAVE_VERSION when the shape changes and add a
@@ -8,8 +9,9 @@ import { CROPS, createBoard, type CropId, type Tile } from './tiles';
  *
  * v2: tiles gained `harvests` (re-yield); the Tier-1 crop set replaced the prototype's
  * crops, so any unknown crop id from an older save is cleared by `normalizeTile`.
+ * v3: added `upgrades` (purchasable levels); backfilled to zero for older saves.
  */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const SAVE_KEY = 'little-acre-v1';
 
 export interface SaveState {
@@ -21,6 +23,7 @@ export interface SaveState {
   maxEnergy: number;
   bloom: number;
   board: Tile[];
+  upgrades: UpgradeLevels;
   seen: Record<string, 1>;
   savedAt: number;
 }
@@ -70,6 +73,7 @@ export function parseSave(data: unknown): SaveState | null {
     maxEnergy: numOr(d.maxEnergy, 16),
     bloom: numOr(d.bloom, 1.4),
     board,
+    upgrades: normalizeUpgrades(d.upgrades),
     seen: d.seen && typeof d.seen === 'object' ? d.seen : {},
     savedAt: numOr(d.savedAt, Date.now()),
   };
