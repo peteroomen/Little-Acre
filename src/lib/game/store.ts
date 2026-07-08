@@ -14,6 +14,7 @@ import {
   LAND,
   STRUCT,
   createBoard,
+  cropGrow,
   harvestPatch,
   harvestValue,
   isCrop,
@@ -223,8 +224,8 @@ export const useGameStore = create<GameState>((set, get) => {
       get().toast('Cleared', 'ok');
       return { fx: 'clear', r, c, color: '#a08a63' };
     }
-    // Water a growing crop.
-    if (t.kind === 'tilled' && t.crop && !t.wilted && t.stage < 3) {
+    // Water a growing crop (below its ripen threshold — not the old fixed stage 3).
+    if (t.kind === 'tilled' && t.crop && !t.wilted && t.stage < cropGrow(t.crop)) {
       if (t.structure === 'sprinkler') {
         get().toast('Sprinkler waters this', 'bad');
         return { fx: 'nudge', r, c };

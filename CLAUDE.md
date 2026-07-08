@@ -266,9 +266,19 @@ Trade-offs — what this makes easier or harder.
 
 > **Update this section at the end of every session** — what shipped, what's next.
 
-- **Phase:** M0 scaffold shipped; M2 economy underway (crops + real upgrade purchases landed);
-  **Modes shipped** — Main Menu + Freeplay + 3 tutorial Puzzles (DESIGN.md §3).
-- **This session (2026-07-07): Main Menu + Freeplay + tutorial Puzzles** (branch
+- **Phase:** M0 scaffold shipped; M2 economy underway (crops + upgrades landed); **Modes shipped** —
+  Main Menu + Freeplay + 3 tutorial Puzzles (DESIGN.md §3).
+- **This session (2026-07-08): playtest fixes** (branch `fix/playtest-fixes`). Four items off the
+  owner's live-build playtest: (1) **bug** — the store's water action still gated on the old fixed
+  `stage < 3`, so a Tomato (grow 4) at stage 3 couldn't be watered and never ripened (broke puzzle 3
+  - Freeplay tomatoes); now `t.stage < cropGrow(t.crop)`. (2) puzzle **objective banner**
+    `top-[72px]`→`top-[104px]` to clear the HUD. (3) tile-side **seams** fixed by drawing the board
+    depth as one `drawSkirt()` slab instead of per-tile cube sides. (4) **furrows** softened so dirt
+    has no dark streak. lint/type-check/build clean, 54 tests green; Playwright-verified (tomato waters
+    at stage 3 → ripens → harvests; banner clears HUD; clean slab). See
+    `docs/work/2026-07-08-playtest-fixes.md`. **Next:** controls overhaul (contextual tap + radial) +
+    Till action + grass-start tutorial.
+- **Prior session (2026-07-07): Main Menu + Freeplay + tutorial Puzzles** (branch
   `feature/menu-puzzles`, PR after #2). The app now boots to a cozy **Main Menu** (Freeplay /
   Puzzles, Settings reserved) via new store app-state `screen: 'menu' | 'puzzleSelect' | 'game'` +
   `mode: 'freeplay' | 'puzzle'`; `App.tsx` renders MainMenu / PuzzleSelect / Game by `screen` and
