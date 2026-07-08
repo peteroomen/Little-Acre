@@ -84,10 +84,10 @@ describe('actionsFor — empty soil (plant + structures)', () => {
     expect(builds(a.ring)).toEqual(['carrot', 'potato', 'tomato', 'sprinkler', 'scarecrow']);
   });
 
-  it('puzzle: ring restricted to the taught crop, no structures/land', () => {
+  it('puzzle: a single taught crop promotes to a quick-tap plant (no 1-item radial)', () => {
     const a = actionsFor(tile({ kind: 'tilled', crop: null }), PUZZLE);
-    expect(builds(a.ring)).toEqual(['carrot']);
-    expect(kinds(a.ring)).not.toContain('structure');
+    expect(a.primary).toMatchObject({ kind: 'plant', build: 'carrot' });
+    expect(a.ring).toEqual([]);
   });
 });
 

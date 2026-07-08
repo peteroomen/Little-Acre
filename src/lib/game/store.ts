@@ -485,7 +485,13 @@ export const useGameStore = create<GameState>((set, get) => {
       const acts = actionsFor(t, ctxFromState());
       // No secondary choices ⇒ run the lone default straight away; else open the radial.
       if (acts.ring.length === 0) {
-        if (!acts.primary) return NONE;
+        if (!acts.primary) {
+          // Nothing to do here — give a nudge (and a hint on a resting pond/rock) so the tap
+          // registers instead of feeling dead.
+          if (t.kind === 'pond') get().toast('The pond is restocking', 'bad');
+          else if (t.kind === 'rock') get().toast('This rock is spent — it will recover', 'bad');
+          return { fx: 'nudge', r, c };
+        }
         const res = execAction(t, acts.primary);
         get().save();
         return res;

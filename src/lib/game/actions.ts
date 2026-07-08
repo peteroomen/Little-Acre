@@ -169,8 +169,17 @@ function harvestAction(crop: CropId): TileAction {
  * The actions a tap on `t` offers, given the run context. `primary` is the fast default
  * (radial centre / quick-tap); `ring` holds the secondary choices. When `ring` is empty the
  * store runs `primary` on a bare tap; otherwise it opens the press-hold radial.
+ *
+ * A lone option (no default + exactly one ring choice — e.g. a tutorial's single taught crop) is
+ * promoted to the primary so a quick tap runs it, rather than forcing a drag into a 1-item radial.
  */
 export function actionsFor(t: Tile, ctx: ActionCtx): TileActions {
+  const a = rawActionsFor(t, ctx);
+  if (a.primary === null && a.ring.length === 1) return { primary: a.ring[0], ring: [] };
+  return a;
+}
+
+function rawActionsFor(t: Tile, ctx: ActionCtx): TileActions {
   switch (t.kind) {
     case 'pond':
       return { primary: (t.pondStock ?? 0) > 0 ? fishAction : null, ring: [] };
