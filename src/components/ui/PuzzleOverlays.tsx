@@ -1,11 +1,7 @@
 'use client';
 
-import { getPuzzle, isPuzzleUnlocked, PUZZLES } from '@/lib/game/puzzles';
+import { cropPlural, getPuzzle, isPuzzleUnlocked, PUZZLES } from '@/lib/game/puzzles';
 import { useGameStore } from '@/lib/game/store';
-
-function cropLabel(crop: string): string {
-  return crop === 'any' ? 'Crop' : crop.charAt(0).toUpperCase() + crop.slice(1);
-}
 
 /** Live objective banner (goal · progress · nights) with a Quit-to-select affordance. */
 export function ObjectiveBanner() {
@@ -28,8 +24,7 @@ export function ObjectiveBanner() {
             Objective
           </span>
           <span className="font-pixel text-[13px] text-[#5a462f]">
-            Harvest {count} {cropLabel(crop)}
-            {count === 1 ? '' : 's'}
+            Harvest {count} {cropPlural(crop, count)}
           </span>
         </div>
         <span className="h-7 w-0.5 bg-[#f0cfa8]" />
@@ -87,8 +82,7 @@ export function PuzzleIntro() {
         <p className="mt-2.5 text-sm leading-relaxed text-[#7a6547]">{def.blurb}</p>
         <div className="la-notch mx-auto mt-3.5 inline-flex items-center gap-2 bg-[#fff2e4] px-3 py-1.5 shadow-[inset_0_0_0_3px_#f4cfa6]">
           <span className="font-pixel text-[13px] text-[#c46d38]">
-            Harvest {def.objective.count} {cropLabel(def.objective.crop)}
-            {def.objective.count === 1 ? '' : 's'}
+            Harvest {def.objective.count} {cropPlural(def.objective.crop, def.objective.count)}
           </span>
           <span className="h-4 w-0.5 bg-[#f0cfa8]" />
           <span className="font-pixel text-[13px] text-[#6a4bb0]">{def.nightLimit} nights</span>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  cropPlural,
   getPuzzle,
   initPuzzleState,
   isPuzzleUnlocked,
@@ -12,6 +13,19 @@ import {
   type PuzzleDef,
   type PuzzleState,
 } from './puzzles';
+
+describe('cropPlural', () => {
+  it('pluralises crop nouns correctly (o → es)', () => {
+    expect(cropPlural('carrot', 3)).toBe('Carrots');
+    expect(cropPlural('potato', 4)).toBe('Potatoes');
+    expect(cropPlural('tomato', 2)).toBe('Tomatoes');
+    expect(cropPlural('any', 5)).toBe('Crops');
+  });
+  it('stays singular at a count of 1', () => {
+    expect(cropPlural('potato', 1)).toBe('Potato');
+    expect(cropPlural('carrot', 1)).toBe('Carrot');
+  });
+});
 
 describe('PUZZLES integrity', () => {
   it('has unique ids', () => {

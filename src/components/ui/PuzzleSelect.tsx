@@ -1,6 +1,7 @@
 'use client';
 
-import { isPuzzleUnlocked, PUZZLES } from '@/lib/game/puzzles';
+import { cropPlural, isPuzzleUnlocked, PUZZLES } from '@/lib/game/puzzles';
+import type { CropId } from '@/lib/game/tiles';
 import { useGameStore } from '@/lib/game/store';
 
 /** Puzzle picker: a card per puzzle with its goal + best stars; sequential unlock. */
@@ -58,9 +59,8 @@ export function PuzzleSelect() {
   );
 }
 
-function goalLine(count: number, crop: string, nights: number): string {
-  const name = crop === 'any' ? 'crop' : crop.charAt(0).toUpperCase() + crop.slice(1);
-  return `Harvest ${count} ${name}${count === 1 ? '' : 's'} in ${nights} nights`;
+function goalLine(count: number, crop: CropId | 'any', nights: number): string {
+  return `Harvest ${count} ${cropPlural(crop, count)} in ${nights} nights`;
 }
 
 /** Three star slots, filled up to `value`. */

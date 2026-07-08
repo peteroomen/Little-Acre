@@ -118,6 +118,18 @@ export function getPuzzle(id: string): PuzzleDef | undefined {
   return PUZZLES.find((p) => p.id === id);
 }
 
+/** Capitalised crop noun for UI ('any' → 'Crop'). */
+export function cropNoun(crop: CropId | 'any'): string {
+  return crop === 'any' ? 'Crop' : crop.charAt(0).toUpperCase() + crop.slice(1);
+}
+
+/** Crop noun pluralised for a count — "Carrots", "Potatoes", "Tomatoes" (not "Potatos"). */
+export function cropPlural(crop: CropId | 'any', count: number): string {
+  const n = cropNoun(crop);
+  if (count === 1) return n;
+  return n.endsWith('o') ? `${n}es` : `${n}s`;
+}
+
 export function initPuzzleState(): PuzzleState {
   return { progress: 0, nightsUsed: 0, status: 'playing' };
 }
