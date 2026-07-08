@@ -14,6 +14,8 @@ import {
   CROPS,
   LAND,
   STRUCT,
+  FISH_COINS,
+  ORE_COINS,
   ROCK_DORMANT_NIGHTS,
   createBoard,
   cropGrow,
@@ -231,11 +233,17 @@ export const useGameStore = create<GameState>((set, get) => {
   /** The action context for the active run: which crops/structures/land a tile may offer. */
   const ctxFromState = (): ActionCtx => {
     const s = get();
-    const crops =
-      s.mode === 'puzzle' && s.puzzle
-        ? (getPuzzle(s.puzzle.id)?.builds ?? []).filter(isCrop)
-        : (Object.keys(CROPS) as CropId[]);
-    return { crops, allowStructures: s.mode === 'freeplay', allowLand: s.mode === 'freeplay' };
+    const def = s.mode === 'puzzle' && s.puzzle ? getPuzzle(s.puzzle.id) : undefined;
+    const crops = def ? (def.builds ?? []).filter(isCrop) : (Object.keys(CROPS) as CropId[]);
+    // Feed is on in Freeplay; in a puzzle it follows the def (default off, so tutorials hide it).
+    const allowFeed = s.mode === 'freeplay' ? true : (def?.allowFeed ?? false);
+    return {
+      crops,
+      allowStructures: s.mode === 'freeplay',
+      allowLand: s.mode === 'freeplay',
+      allowFeed,
+      tiles: s.board,
+    };
   };
 
   /** Can the player afford `n` coins? Toasts on a shortfall. */
@@ -325,7 +333,8 @@ export const useGameStore = create<GameState>((set, get) => {
           return { fx: 'nudge', r, c };
         }
         if (!spend(a.energyCost)) return NONE;
-        const gain = 12 + Math.floor(Math.random() * 20);
+        // Deterministic payout — no RNG, so gathering is puzzle-safe and reproducible.
+        const gain = FISH_COINS;
         set((s) => ({ coins: s.coins + gain }));
         patchTile(r, c, { pondStock: (t.pondStock ?? 0) - 1 });
         markSeen('fish');
@@ -339,8 +348,10 @@ export const useGameStore = create<GameState>((set, get) => {
         }
         if (!spend(a.energyCost)) return NONE;
         const charges = (t.rockCharges ?? 0) - 1;
-        const gain = 8 + Math.floor(Math.random() * 12);
-        const gem = Math.random() < 0.22 ? 1 : 0;
+        // Deterministic: fixed coins per pull, and a gem on the LAST pull of the cycle (charges
+        // hit 0 → the rock goes dormant). Derived from the charge counter — no new Tile fields.
+        const gain = ORE_COINS;
+        const gem = charges <= 0 ? 1 : 0;
         set((s) => ({ coins: s.coins + gain, gems: s.gems + gem }));
         patchTile(r, c, {
           rockCharges: charges,

@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CROPS,
+  FISH_COINS,
+  ORE_COINS,
   createBoard,
   cropGrow,
   harvestPatch,
   harvestValue,
+  isAutoWatered,
   isRipe,
   needsWater,
   resolveNight,
@@ -73,11 +76,32 @@ describe('per-crop grow times', () => {
   });
 
   it('needs water while below its grow threshold, unwatered, unsprinklered', () => {
-    expect(needsWater(tile({ crop: 'carrot', stage: 1 }))).toBe(true);
-    expect(needsWater(tile({ crop: 'carrot', stage: 2 }))).toBe(false); // ripe
-    expect(needsWater(tile({ crop: 'tomato', stage: 3 }))).toBe(true);
-    expect(needsWater(tile({ crop: 'carrot', stage: 1, watered: true }))).toBe(false);
-    expect(needsWater(tile({ crop: 'carrot', stage: 1, structure: 'sprinkler' }))).toBe(false);
+    expect(needsWater(tile({ crop: 'carrot', stage: 1 }), [])).toBe(true);
+    expect(needsWater(tile({ crop: 'carrot', stage: 2 }), [])).toBe(false); // ripe
+    expect(needsWater(tile({ crop: 'tomato', stage: 3 }), [])).toBe(true);
+    expect(needsWater(tile({ crop: 'carrot', stage: 1, watered: true }), [])).toBe(false);
+    expect(needsWater(tile({ crop: 'carrot', stage: 1, structure: 'sprinkler' }), [])).toBe(false);
+  });
+});
+
+describe('isAutoWatered — sprinkler plus-shape', () => {
+  const at = (r: number, c: number, over: Partial<Tile> = {}): Tile => tile({ r, c, ...over });
+
+  it('own-tile sprinkler auto-waters regardless of the board', () => {
+    expect(isAutoWatered(at(1, 1, { structure: 'sprinkler' }), [])).toBe(true);
+  });
+
+  it('an orthogonal neighbour of a sprinkler is auto-watered; a diagonal is not', () => {
+    const board = [at(1, 1, { structure: 'sprinkler' }), at(0, 1), at(1, 2), at(0, 0), at(2, 2)];
+    expect(isAutoWatered(at(0, 1), board)).toBe(true); // above
+    expect(isAutoWatered(at(1, 2), board)).toBe(true); // right
+    expect(isAutoWatered(at(0, 0), board)).toBe(false); // diagonal
+    expect(isAutoWatered(at(2, 2), board)).toBe(false); // far
+  });
+
+  it('a scarecrow neighbour does not auto-water', () => {
+    const board = [at(1, 1, { structure: 'scarecrow' }), at(0, 1)];
+    expect(isAutoWatered(at(0, 1), board)).toBe(false);
   });
 });
 
@@ -101,19 +125,25 @@ describe('harvestPatch (re-yield)', () => {
     });
   });
 
-  it('re-ripens a tomato until its 3 harvests are spent, then clears', () => {
-    // 1st reap → regrows to grow(4) - regrow(2) = stage 2, re-ripens in 2 nights
+  it('re-ripens a tomato until its 4 harvests are spent, then clears', () => {
+    // 1st reap → regrows to grow(4) - regrow(1) = stage 3, re-ripens in 1 night
     const first = harvestPatch(tile({ crop: 'tomato', stage: 4, harvests: 0 }));
-    expect(first).toMatchObject({ stage: 2, harvests: 1 });
+    expect(first).toMatchObject({ stage: 3, harvests: 1 });
     expect(first.crop).toBeUndefined(); // stays planted (no crop:null in the patch)
 
-    // 2nd reap → still has one left
-    const second = harvestPatch(tile({ crop: 'tomato', stage: 4, harvests: 1 }));
-    expect(second).toMatchObject({ stage: 2, harvests: 2 });
+    // 2nd & 3rd reaps → still producing
+    expect(harvestPatch(tile({ crop: 'tomato', stage: 4, harvests: 1 }))).toMatchObject({
+      stage: 3,
+      harvests: 2,
+    });
+    expect(harvestPatch(tile({ crop: 'tomato', stage: 4, harvests: 2 }))).toMatchObject({
+      stage: 3,
+      harvests: 3,
+    });
 
-    // 3rd reap → spent, tile clears
-    const third = harvestPatch(tile({ crop: 'tomato', stage: 4, harvests: 2 }));
-    expect(third).toMatchObject({ crop: null, stage: 0, harvests: 0 });
+    // 4th reap → spent, tile clears
+    const last = harvestPatch(tile({ crop: 'tomato', stage: 4, harvests: 3 }));
+    expect(last).toMatchObject({ crop: null, stage: 0, harvests: 0 });
   });
 });
 
@@ -154,6 +184,62 @@ describe('resolveNight', () => {
     expect(wilted).toBe(0);
   });
 
+  it('a center sprinkler grows its unwatered plus-shape; diagonals wilt', () => {
+    const g = (r: number, c: number, over: Partial<Tile> = {}): Tile =>
+      tile({ r, c, crop: 'potato', stage: 1, ...over });
+    // sprinkler at center (1,1); its 4 orthogonal neighbours grow unwatered, diagonals wilt.
+    const board: Tile[] = [
+      g(0, 0),
+      g(0, 1),
+      g(0, 2),
+      g(1, 0),
+      g(1, 1, { crop: null, structure: 'sprinkler' }),
+      g(1, 2),
+      g(2, 0),
+      g(2, 1),
+      g(2, 2),
+    ];
+    const { tiles, grew, wilted } = resolveNight(board);
+    const cell = (r: number, c: number) => tiles[r * 3 + c];
+    // orthogonal neighbours grew despite being unwatered
+    for (const [r, c] of [
+      [0, 1],
+      [1, 0],
+      [1, 2],
+      [2, 1],
+    ]) {
+      expect(cell(r, c).stage).toBe(2);
+      expect(cell(r, c).wilted).toBe(false);
+    }
+    // diagonals (and far corners) wilted
+    for (const [r, c] of [
+      [0, 0],
+      [0, 2],
+      [2, 0],
+      [2, 2],
+    ]) {
+      expect(cell(r, c).wilted).toBe(true);
+    }
+    expect(grew).toBe(4);
+    expect(wilted).toBe(4);
+  });
+
+  it('an edge-placed sprinkler waters only the tiles sharing an edge', () => {
+    const g = (r: number, c: number, over: Partial<Tile> = {}): Tile =>
+      tile({ r, c, crop: 'potato', stage: 1, ...over });
+    // sprinkler at corner (0,0): (0,1) and (1,0) grow; (1,1) is diagonal → wilts.
+    const board: Tile[] = [
+      g(0, 0, { crop: null, structure: 'sprinkler' }),
+      g(0, 1),
+      g(1, 0),
+      g(1, 1),
+    ];
+    const { tiles } = resolveNight(board);
+    expect(tiles[1].stage).toBe(2); // (0,1)
+    expect(tiles[2].stage).toBe(2); // (1,0)
+    expect(tiles[3].wilted).toBe(true); // (1,1) diagonal
+  });
+
   it('does not advance a ripe crop past its grow threshold', () => {
     const { tiles, grew } = resolveNight([tile({ crop: 'carrot', stage: 2, watered: true })]);
     expect(tiles[0].stage).toBe(2);
@@ -192,6 +278,13 @@ describe('resolveNight', () => {
       rockCharges: 3,
       rockDormant: 0,
     });
+  });
+});
+
+describe('deterministic gathering payouts', () => {
+  it('exposes fixed fish/ore coin values (the solver mirrors these)', () => {
+    expect(FISH_COINS).toBe(18);
+    expect(ORE_COINS).toBe(13);
   });
 });
 
