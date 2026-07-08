@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 
-import { loadGame, saveGame, SAVE_VERSION, type SaveState } from './save';
+import {
+  loadGame,
+  loadPuzzleStars,
+  saveGame,
+  savePuzzleStars,
+  SAVE_VERSION,
+  type SaveState,
+} from './save';
+import { getPuzzle, registerHarvest, registerNight, starsFor, type PuzzleState } from './puzzles';
 import {
   CROPS,
   LAND,
@@ -13,6 +21,7 @@ import {
   isRipe,
   resolveNight,
   type BuildId,
+  type CropId,
   type Tile,
   type Tool,
 } from './tiles';
@@ -67,7 +76,25 @@ export interface NightInfo {
   sub: string;
 }
 
+export type Screen = 'menu' | 'puzzleSelect' | 'game';
+export type GameMode = 'freeplay' | 'puzzle';
+
+/** Active-puzzle run state: the pure PuzzleState plus store-only UI bits. */
+export interface PuzzleRun extends PuzzleState {
+  id: string;
+  /** Stars earned on win (0 while playing/lost). */
+  stars: number;
+  /** Whether the intro blurb card is still showing. */
+  intro: boolean;
+}
+
 export interface GameState {
+  // ── app state ──
+  screen: Screen;
+  mode: GameMode;
+  puzzle: PuzzleRun | null;
+  puzzleStars: Record<string, number>;
+
   // ── run state ──
   coins: number;
   gems: number;
@@ -93,6 +120,12 @@ export interface GameState {
 
   // ── actions ──
   init: () => void;
+  startFreeplay: () => void;
+  startPuzzle: (id: string) => void;
+  goMenu: () => void;
+  goPuzzleSelect: () => void;
+  retryPuzzle: () => void;
+  dismissPuzzleIntro: () => void;
   setTool: (tool: Tool) => void;
   setSelectedBuild: (id: BuildId) => void;
   useTool: (r: number, c: number) => ActionResult;
@@ -110,6 +143,20 @@ let toastId = 0;
 
 function tileIndex(r: number, c: number): number {
   return r * 3 + c;
+}
+
+/** Default Freeplay run state (used for the initial store + a first-time Freeplay start). */
+function freshFreeplay() {
+  return {
+    coins: 220,
+    gems: 3,
+    day: 1,
+    energy: 16,
+    maxEnergy: 16,
+    bloom: 1.4,
+    board: createBoard(),
+    upgrades: { ...ZERO_UPGRADES },
+  };
 }
 
 export const useGameStore = create<GameState>((set, get) => {
@@ -136,6 +183,27 @@ export const useGameStore = create<GameState>((set, get) => {
     set((s) => ({ seen: { ...s.seen, [key]: 1 } }));
   };
 
+  /** Record a harvest against the active puzzle objective; persist best stars on a win. */
+  const trackPuzzleHarvest = (crop: CropId) => {
+    const run = get().puzzle;
+    if (get().mode !== 'puzzle' || !run) return;
+    const def = getPuzzle(run.id);
+    if (!def) return;
+    const next = registerHarvest(def, run, crop);
+    const patch: PuzzleRun = { ...run, ...next };
+    if (next.status === 'won') {
+      const stars = starsFor(def, next.nightsUsed);
+      patch.stars = stars;
+      const prev = get().puzzleStars[run.id] ?? 0;
+      if (stars > prev) {
+        const puzzleStars = { ...get().puzzleStars, [run.id]: stars };
+        set({ puzzleStars });
+        savePuzzleStars(puzzleStars);
+      }
+    }
+    set({ puzzle: patch });
+  };
+
   const clickTile = (t: Tile): ActionResult => {
     const { r, c } = t;
     // Harvest a ripe crop — free (no energy), the payoff moment. Re-yield crops re-ripen
@@ -145,6 +213,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const gain = harvestValue(crop, get().bloom * harvestMultFor(get().upgrades));
       set((s) => ({ coins: s.coins + gain }));
       patchTile(r, c, harvestPatch(t));
+      trackPuzzleHarvest(crop);
       return { fx: 'harvest', r, c, gain, color: CROPS[crop].color };
     }
     // Clear a wilted crop (costs energy).
@@ -267,14 +336,11 @@ export const useGameStore = create<GameState>((set, get) => {
   };
 
   return {
-    coins: 220,
-    gems: 3,
-    day: 1,
-    energy: 16,
-    maxEnergy: 16,
-    bloom: 1.4,
-    board: createBoard(),
-    upgrades: { ...ZERO_UPGRADES },
+    screen: 'menu',
+    mode: 'freeplay',
+    puzzle: null,
+    puzzleStars: {},
+    ...freshFreeplay(),
 
     phase: 'day',
     night: { title: '', sub: '' },
@@ -296,8 +362,66 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     init: () => {
+      // Load persisted state but land on the menu — the player picks Freeplay or a Puzzle.
       const loaded = loadGame();
       if (loaded) applySave(set, loaded);
+      set({ puzzleStars: loadPuzzleStars(), screen: 'menu' });
+    },
+
+    startFreeplay: () => {
+      const loaded = loadGame();
+      if (loaded) applySave(set, loaded);
+      else set(freshFreeplay());
+      set({
+        mode: 'freeplay',
+        screen: 'game',
+        puzzle: null,
+        phase: 'day',
+        night: { title: '', sub: '' },
+        tool: 'click',
+        selectedBuild: 'carrot',
+        storeOpen: false,
+      });
+    },
+
+    startPuzzle: (id) => {
+      const def = getPuzzle(id);
+      if (!def) return;
+      set({
+        mode: 'puzzle',
+        screen: 'game',
+        puzzle: { id, progress: 0, nightsUsed: 0, status: 'playing', stars: 0, intro: true },
+        coins: def.startCoins,
+        gems: 0,
+        day: 1,
+        energy: def.startEnergy,
+        maxEnergy: def.startEnergy,
+        bloom: 1,
+        board: def.makeBoard(),
+        upgrades: { ...ZERO_UPGRADES },
+        phase: 'day',
+        night: { title: '', sub: '' },
+        tool: 'build',
+        selectedBuild: def.builds[0],
+        storeOpen: false,
+      });
+    },
+
+    goMenu: () => {
+      if (get().mode === 'freeplay') get().save();
+      set({ screen: 'menu', storeOpen: false });
+    },
+
+    goPuzzleSelect: () => set({ screen: 'puzzleSelect', storeOpen: false }),
+
+    retryPuzzle: () => {
+      const run = get().puzzle;
+      if (run) get().startPuzzle(run.id);
+    },
+
+    dismissPuzzleIntro: () => {
+      const run = get().puzzle;
+      if (run) set({ puzzle: { ...run, intro: false } });
     },
 
     setTool: (tool) => set({ tool }),
@@ -334,6 +458,12 @@ export const useGameStore = create<GameState>((set, get) => {
             sub: parts.length ? parts.join(' · ') : 'A quiet night on the farm',
           },
         }));
+        // Puzzle mode: count the night and resolve a loss if the limit is exceeded.
+        const run = get().puzzle;
+        if (get().mode === 'puzzle' && run) {
+          const def = getPuzzle(run.id);
+          if (def) set({ puzzle: { ...run, ...registerNight(def, run) } });
+        }
         get().save();
       }, NIGHT_GROW_MS);
       window.setTimeout(() => {
@@ -401,6 +531,8 @@ export const useGameStore = create<GameState>((set, get) => {
 
     save: () => {
       const s = get();
+      // Puzzles are ephemeral — never persist a puzzle board to the Freeplay save.
+      if (s.mode === 'puzzle') return;
       saveGame({
         version: SAVE_VERSION,
         coins: s.coins,

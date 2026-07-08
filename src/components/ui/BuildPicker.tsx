@@ -1,5 +1,6 @@
 'use client';
 
+import { getPuzzle } from '@/lib/game/puzzles';
 import { CROPS, LAND, STRUCT, type BuildId } from '@/lib/game/tiles';
 import { useGameStore } from '@/lib/game/store';
 
@@ -34,15 +35,21 @@ const OPTIONS: Option[] = [
 /** The crop / structure / land palette shown while the Build tool is active. */
 export function BuildPicker() {
   const tool = useGameStore((s) => s.tool);
+  const mode = useGameStore((s) => s.mode);
+  const puzzle = useGameStore((s) => s.puzzle);
   const selected = useGameStore((s) => s.selectedBuild);
   const setSelectedBuild = useGameStore((s) => s.setSelectedBuild);
 
   if (tool !== 'build') return null;
 
+  // In puzzle mode, only offer the puzzle's allowed builds (restricted for tutorials).
+  const allowed = mode === 'puzzle' && puzzle ? getPuzzle(puzzle.id)?.builds : undefined;
+  const options = allowed ? OPTIONS.filter((o) => allowed.includes(o.id as never)) : OPTIONS;
+
   return (
     <div className="absolute inset-x-0 bottom-[104px] z-[11] flex justify-center px-2.5">
       <div className="la-notch flex max-w-[680px] flex-wrap justify-center gap-1.5 bg-[var(--la-panel)] p-2 shadow-[inset_0_0_0_3px_#e7cfa5]">
-        {OPTIONS.map((o) => {
+        {options.map((o) => {
           const on = selected === o.id;
           return (
             <button

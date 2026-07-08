@@ -10,6 +10,7 @@ import { BuildPicker } from './ui/BuildPicker';
 import { Hotbar } from './ui/Hotbar';
 import { Hud } from './ui/Hud';
 import { NightOverlay } from './ui/NightOverlay';
+import { ObjectiveBanner, PuzzleIntro, PuzzleResult } from './ui/PuzzleOverlays';
 import { StoreModal } from './ui/StoreModal';
 import { Toasts } from './ui/Toasts';
 
@@ -25,8 +26,7 @@ export function Game() {
     const renderer = new BoardRenderer(canvas);
     rendererRef.current = renderer;
 
-    // Load any prior save and seed the first snapshot.
-    useGameStore.getState().init();
+    // App.init() has already loaded the save / set up the active run — just seed the snapshot.
     const pushSnapshot = () => {
       const { board, phase } = useGameStore.getState();
       renderer.setSnapshot({ board, phase, hoverKey: hoverKeyRef.current });
@@ -143,11 +143,14 @@ export function Game() {
     <div className="relative h-full w-full overflow-hidden">
       <canvas ref={canvasRef} className="absolute inset-0" />
       <Hud />
+      <ObjectiveBanner />
       <BuildPicker />
       <Hotbar />
       <Toasts />
       <NightOverlay />
       <StoreModal />
+      <PuzzleIntro />
+      <PuzzleResult />
     </div>
   );
 }

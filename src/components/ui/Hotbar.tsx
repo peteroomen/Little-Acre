@@ -5,6 +5,7 @@ import { useGameStore } from '@/lib/game/store';
 /** Bottom hotbar: Click / Build tool toggle + the Store button. */
 export function Hotbar() {
   const tool = useGameStore((s) => s.tool);
+  const mode = useGameStore((s) => s.mode);
   const setTool = useGameStore((s) => s.setTool);
   const openStore = useGameStore((s) => s.openStore);
 
@@ -42,21 +43,25 @@ export function Hotbar() {
           </ToolButton>
         </div>
 
-        <div className="w-[3px] self-stretch bg-[#ecd9b6]" />
-
-        <button
-          onClick={openStore}
-          className="la-notch flex w-[74px] flex-col items-center justify-center gap-0.5 bg-[var(--la-leaf)] px-1.5 py-2 font-pixel text-[13px] font-semibold text-[var(--la-leaf-text)] shadow-[inset_0_3px_0_rgba(255,255,255,.45),inset_0_-5px_0_rgba(40,80,20,.28),inset_0_0_0_3px_#bfe89b] active:translate-y-0.5"
-        >
-          <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden>
-            <rect x="4" y="8" width="14" height="8" fill="#fbf3dc" />
-            <rect x="4" y="6" width="14" height="3" fill="#e58a6a" />
-            <rect x="6" y="6" width="2" height="3" fill="#fbf3dc" />
-            <rect x="10" y="6" width="2" height="3" fill="#fbf3dc" />
-            <rect x="14" y="6" width="2" height="3" fill="#fbf3dc" />
-          </svg>
-          <span>Store</span>
-        </button>
+        {/* Store is a Freeplay affordance — puzzles are self-contained (no shop/upgrades/prestige). */}
+        {mode === 'freeplay' && (
+          <>
+            <div className="w-[3px] self-stretch bg-[#ecd9b6]" />
+            <button
+              onClick={openStore}
+              className="la-notch flex w-[74px] flex-col items-center justify-center gap-0.5 bg-[var(--la-leaf)] px-1.5 py-2 font-pixel text-[13px] font-semibold text-[var(--la-leaf-text)] shadow-[inset_0_3px_0_rgba(255,255,255,.45),inset_0_-5px_0_rgba(40,80,20,.28),inset_0_0_0_3px_#bfe89b] active:translate-y-0.5"
+            >
+              <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden>
+                <rect x="4" y="8" width="14" height="8" fill="#fbf3dc" />
+                <rect x="4" y="6" width="14" height="3" fill="#e58a6a" />
+                <rect x="6" y="6" width="2" height="3" fill="#fbf3dc" />
+                <rect x="10" y="6" width="2" height="3" fill="#fbf3dc" />
+                <rect x="14" y="6" width="2" height="3" fill="#fbf3dc" />
+              </svg>
+              <span>Store</span>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

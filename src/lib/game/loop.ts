@@ -10,11 +10,17 @@ import { useGameStore } from './store';
 const SAVE_INTERVAL_MS = 10_000;
 
 export function startLoop(): () => void {
+  // Only Freeplay autosaves — puzzles are ephemeral and must not overwrite the farm save.
+  // (store.save() also no-ops in puzzle mode; this skips the work entirely.)
   const intervalId = window.setInterval(() => {
+    if (useGameStore.getState().mode === 'puzzle') return;
     useGameStore.getState().save();
   }, SAVE_INTERVAL_MS);
 
-  const persist = () => useGameStore.getState().save();
+  const persist = () => {
+    if (useGameStore.getState().mode === 'puzzle') return;
+    useGameStore.getState().save();
+  };
   const handleVisibility = () => {
     if (typeof document !== 'undefined' && document.hidden) persist();
   };
