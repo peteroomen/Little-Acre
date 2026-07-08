@@ -29,11 +29,15 @@ const FREE: ActionCtx = {
   crops: ['carrot', 'potato', 'tomato'] as CropId[],
   allowStructures: true,
   allowLand: true,
+  allowFeed: true,
+  tiles: [],
 };
 const PUZZLE: ActionCtx = {
   crops: ['carrot'] as CropId[],
   allowStructures: false,
   allowLand: false,
+  allowFeed: false,
+  tiles: [],
 };
 
 const kinds = (as: { kind: string }[]) => as.map((a) => a.kind);
@@ -122,10 +126,24 @@ describe('actionsFor — planted soil', () => {
     expect(kinds(a.ring)).toEqual(['fertilize', 'uproot']);
   });
 
-  it('puzzle growing crop: water default, ring has no structures', () => {
+  it('puzzle growing crop: water default, ring has no feed or structures (allowFeed off)', () => {
     const a = actionsFor(tile({ crop: 'carrot', stage: 1 }), PUZZLE);
     expect(a.primary?.kind).toBe('water');
-    expect(kinds(a.ring)).toEqual(['fertilize', 'uproot']);
+    expect(kinds(a.ring)).toEqual(['uproot']);
+  });
+
+  it('allowFeed gates Feed on a growing crop', () => {
+    const dry = tile({ crop: 'carrot', stage: 1 });
+    expect(kinds(actionsFor(dry, { ...FREE, allowFeed: false }).ring)).not.toContain('fertilize');
+    expect(kinds(actionsFor(dry, { ...FREE, allowFeed: true }).ring)).toContain('fertilize');
+  });
+
+  it('water default is suppressed by a sprinkler on an orthogonal neighbour', () => {
+    // growing carrot at (0,1); a sprinkler at (0,0) auto-waters it → no Water default.
+    const crop = tile({ r: 0, c: 1, crop: 'carrot', stage: 1 });
+    const sprinkler = tile({ r: 0, c: 0, crop: null, structure: 'sprinkler' });
+    const a = actionsFor(crop, { ...FREE, tiles: [sprinkler, crop] });
+    expect(a.primary).toBeNull();
   });
 });
 
