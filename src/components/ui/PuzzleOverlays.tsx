@@ -17,7 +17,7 @@ export function ObjectiveBanner() {
   const nightsShown = Math.min(puzzle.nightsUsed, def.nightLimit);
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[72px] z-[12] flex justify-center px-3">
+    <div className="pointer-events-none absolute inset-x-0 top-[104px] z-[12] flex justify-center px-3">
       <div className="la-notch pointer-events-auto flex items-center gap-3 bg-[#fff7ea] px-3.5 py-2 shadow-[inset_0_0_0_3px_#e7cfa5]">
         <div className="flex flex-col leading-tight">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-[#c99a6e]">

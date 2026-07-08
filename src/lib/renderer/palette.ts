@@ -34,7 +34,7 @@ export const TILE_TOP = {
   rock: ['#b7ad93', '#988c6f', '#d2c9af'],
 } as const;
 
-export const FURROW = 'rgba(90,60,30,.32)';
+export const FURROW = 'rgba(120,85,45,.16)';
 export const HOVER_OUTLINE = 'rgba(255,255,255,.92)';
 
 /** Crop stem / sparkle / water-droplet accents. */

@@ -352,6 +352,7 @@ export class BoardRenderer {
       c.fillRect(rr16(px), rr16(py), 3, 3);
     }
 
+    this.drawSkirt();
     const order = [...this.snapshot.board].sort((a, b) => a.r + a.c - (b.r + b.c));
     for (const t of order) this.drawTile(t, time);
 
@@ -403,9 +404,43 @@ export class BoardRenderer {
     c.restore();
   }
 
+  /**
+   * The board's 3D depth, drawn once as a single slab skirt for the whole 3×3 grid so there are no
+   * interior tile-to-tile seams. Two faces (left/right) drop from the front-bottom silhouette edges.
+   */
+  private drawSkirt(): void {
+    const c = this.ctx;
+    const { HW, QH, D, originX: O, originY: O2 } = this;
+    const N = 3; // board is a fixed 3×3 grid
+    const bx = O;
+    const by = O2 + 2 * N * QH; // front-bottom point
+    const rx = O + N * HW;
+    const ry = O2 + N * QH; // right point
+    const lx = O - N * HW;
+    const ly = O2 + N * QH; // left point
+
+    c.fillStyle = TILE_SIDE.right;
+    c.beginPath();
+    c.moveTo(bx, by);
+    c.lineTo(rx, ry);
+    c.lineTo(rx, ry + D);
+    c.lineTo(bx, by + D);
+    c.closePath();
+    c.fill();
+
+    c.fillStyle = TILE_SIDE.left;
+    c.beginPath();
+    c.moveTo(bx, by);
+    c.lineTo(lx, ly);
+    c.lineTo(lx, ly + D);
+    c.lineTo(bx, by + D);
+    c.closePath();
+    c.fill();
+  }
+
   private drawTile(t: Tile, time: number): void {
     const c = this.ctx;
-    const { HW, QH, D } = this;
+    const { HW, QH } = this;
     const g = this.geom.get(this.key(t.r, t.c))!;
     const anim = this.anims.get(this.key(t.r, t.c))!;
     const cx = g.cx;
@@ -450,26 +485,8 @@ export class BoardRenderer {
     const bot: [number, number] = [cx, oy + QH * 2];
     const left: [number, number] = [cx - HW, oy + QH];
 
-    // cube sides
-    c.fillStyle = TILE_SIDE.right;
-    c.beginPath();
-    c.moveTo(bot[0], bot[1]);
-    c.lineTo(right[0], right[1]);
-    c.lineTo(right[0], right[1] + D);
-    c.lineTo(bot[0], bot[1] + D);
-    c.closePath();
-    c.fill();
-    c.fillStyle = TILE_SIDE.left;
-    c.beginPath();
-    c.moveTo(bot[0], bot[1]);
-    c.lineTo(left[0], left[1]);
-    c.lineTo(left[0], left[1] + D);
-    c.lineTo(bot[0], bot[1] + D);
-    c.closePath();
-    c.fill();
-    c.fillStyle = TILE_SIDE.edge;
-    c.fillRect(rr16(left[0]), rr16(left[1] + D - 1), rr16(HW * 2), 2);
-
+    // Tile sides are drawn once as a unified slab skirt (drawSkirt) so contiguous tiles don't
+    // show interior seams — here we only paint the per-tile top face + its contents.
     const watered = t.kind === 'tilled' && !!t.crop && t.watered && !t.wilted;
     let ramp: readonly [string, string, string] = TILE_TOP.grass;
     if (t.kind === 'tilled') ramp = watered ? TILE_TOP.tilledWet : TILE_TOP.tilledDry;
@@ -496,7 +513,7 @@ export class BoardRenderer {
     }
     if (t.kind === 'tilled') {
       c.strokeStyle = FURROW;
-      c.lineWidth = 2;
+      c.lineWidth = 1.5;
       for (let i = 1; i < 4; i++) {
         const f = i / 4;
         c.beginPath();
