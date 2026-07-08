@@ -68,4 +68,19 @@ describe('parseSave', () => {
     expect(parsed!.board[5].crop).toBe('tomato');
     expect(parsed!.board[5].harvests).toBe(0);
   });
+
+  it('backfills gathering stock for older saves (v3→v4)', () => {
+    const board = createBoard().map((t) => ({ ...t }));
+    // an old save had no pond/rock stock fields
+    delete (board[6] as Partial<{ pondStock: number }>).pondStock; // pond at (2,0)
+    delete (board[0] as Partial<{ rockCharges: number }>).rockCharges; // rock at (0,0)
+    delete (board[0] as Partial<{ rockDormant: number }>).rockDormant;
+    const parsed = parseSave({ board });
+    expect(parsed!.board[6]).toMatchObject({ kind: 'pond', pondStock: 4 });
+    expect(parsed!.board[0]).toMatchObject({ kind: 'rock', rockCharges: 3, rockDormant: 0 });
+    // preserves a partially-mined rock's live state
+    const worn = createBoard().map((t) => ({ ...t }));
+    worn[0] = { ...worn[0], rockCharges: 1, rockDormant: 0 };
+    expect(parseSave({ board: worn })!.board[0].rockCharges).toBe(1);
+  });
 });

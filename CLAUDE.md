@@ -267,8 +267,30 @@ Trade-offs — what this makes easier or harder.
 > **Update this section at the end of every session** — what shipped, what's next.
 
 - **Phase:** M0 scaffold shipped; M2 economy underway (crops + upgrades landed); **Modes shipped** —
-  Main Menu + Freeplay + 3 tutorial Puzzles (DESIGN.md §3).
-- **This session (2026-07-08): playtest fixes** (branch `fix/playtest-fixes`). Four items off the
+  Main Menu + Freeplay + 3 tutorial Puzzles (DESIGN.md §3); **contextual controls shipped** (this session).
+- **This session (2026-07-08): "Hands on the Farm" super-slice** (branch `feature/hands-on-farm`,
+  PR open — do not merge, owner reviews). Replaced Click/Build tool modes with **contextual tap +
+  press-hold radial** and wired the full farming verb set. New pure **`src/lib/game/actions.ts`**
+  (`actionsFor(tile, ctx) → {primary, ring}` + radial geometry `ringAngle` / `radialHiFor` /
+  `RADIAL_RADIUS` / `RADIAL_DEADZONE`; `FERTILIZE_COINS`); the RadialMenu is display-only, all
+  selection is `radialHiFor`. Store dropped `tool`/`selectedBuild`/`useTool`/`dispatchBuild` + the
+  `Tool` type, gained `radial`+`radialHi` state and `beginTap`/`setRadialHi`/`commitRadial`/
+  `closeRadial`; `clickTile`/`placeLand`/`buildOn` collapsed into one **`execAction(tile, action)`**
+  switch. **Verbs:** Till (grass→soil) · Plant · Water · **Fertilize** (feed: 8c → +1 stage) ·
+  Harvest · **Uproot** · Clear · Fish · Mine · Structure · Land (excludes plot — till replaces it).
+  **Living board (SAVE v4):** `Tile` gained `pondStock`/`rockCharges`/`rockDormant`; ponds hold 4
+  fish (refill +2/night), rocks hold 3 pulls then go dormant 3 nights; `resolveNight` regenerates
+  both, `normalizeTile` backfills (older saves start stocked). **First Sprout** now starts on wild
+  grass → teaches Till → Plant → Water → Harvest (par re-verified: 9e day-1, 3★ at 2 nights).
+  **Juice:** per-verb fx (till dust / fertilize sparkle+coin / uproot puff), ~90ms radial bloom
+  (reduced-motion-safe), `navigator.vibrate(8)` on single-tap + radial commit. Gesture: pointerdown
+  `beginTap` (fires lone action, else opens radial + `setPointerCapture`), pointermove steers
+  `radialHi` via `radialHiFor`, pointerup `commitRadial` + release capture. Deleted `BuildPicker`,
+  slimmed `Hotbar` to the Store button. lint/type-check/build clean, **77 tests green** (+23); dev
+  server boots clean. See `docs/work/2026-07-08-superslice-controls.md`. **Next:** owner Playwright
+  feel pass; then a renderer tile-state hint (needs water / ready / depleted), Tier-2 crops + tool
+  tiers, board expansion.
+- **Prior session (2026-07-08): playtest fixes** (branch `fix/playtest-fixes`). Four items off the
   owner's live-build playtest: (1) **bug** — the store's water action still gated on the old fixed
   `stage < 3`, so a Tomato (grow 4) at stage 3 couldn't be watered and never ripened (broke puzzle 3
   - Freeplay tomatoes); now `t.stage < cropGrow(t.crop)`. (2) puzzle **objective banner**
