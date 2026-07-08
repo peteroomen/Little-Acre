@@ -56,18 +56,22 @@ export interface StructDef {
  * scripts/little-acre-model.mjs — tune there.
  *  - Carrot: bootstrap — cheap + fast (2 nights). Best coins/tile-night.
  *  - Potato: staple — reliable, balanced (3 nights).
- *  - Tomato: keep-alive — plant once, re-harvest 3× (regrows every 2 nights). Best coins/energy.
+ *  - Tomato: keep-alive — plant once, harvest the same vine 4× (re-ripens in 1 night). Best coins/energy.
  */
 export const CROPS: Record<CropId, CropDef> = {
   carrot: { name: 'Carrot', cost: 4, sell: 20, grow: 2, color: '#f0894a', leaf: '#83c250' },
   potato: { name: 'Potato', cost: 6, sell: 34, grow: 3, color: '#c49a5c', leaf: '#6fae52' },
+  // reyield 4 / regrow 1: once ripe the vine yields one fruit per watered night at 1⚡, so the
+  // amortized energy-per-harvest drops from 3 (which tied carrot, leaving tomato strictly
+  // dominated) to 2 — this is what gives the keep-alive niche real teeth. A solver sweep locks
+  // the final numbers at integration, so keep them as plain literals here.
   tomato: {
     name: 'Tomato',
     cost: 12,
     sell: 18,
     grow: 4,
-    reyield: 3,
-    regrow: 2,
+    reyield: 4,
+    regrow: 1,
     color: '#ef6a4e',
     leaf: '#6cb04a',
   },
@@ -128,6 +132,15 @@ export const ROCK_CHARGES = 3;
 /** Nights a spent rock stays dormant before re-charging. */
 export const ROCK_DORMANT_NIGHTS = 3;
 
+/**
+ * Deterministic gathering payouts (no RNG — puzzle-safe + reproducible; the solver mirrors these):
+ *  - FISH_COINS: coins per catch (≈ the old random mean).
+ *  - ORE_COINS: coins per mining pull. A gem is awarded on the *last* pull of a rock cycle
+ *    (when its charges reach 0 and it goes dormant) — see the mine action in store.ts.
+ */
+export const FISH_COINS = 18;
+export const ORE_COINS = 13;
+
 export const BOARD_ROWS = 3;
 export const BOARD_COLS = 3;
 
@@ -182,14 +195,30 @@ export function isRipe(t: Tile): boolean {
   return t.kind === 'tilled' && !!t.crop && t.stage >= cropGrow(t.crop) && !t.wilted;
 }
 
-/** True when a growing crop still needs watering tonight (not ripe, not wilted, no sprinkler). */
-export function needsWater(t: Tile): boolean {
+/**
+ * True when a growing crop on tile `t` is auto-watered tonight: either it sits on a Sprinkler,
+ * or an orthogonally-adjacent tile does. Adjacency is derived from r/c (|Δr| + |Δc| === 1), not
+ * array index, so odd-sized boards keep working. The game's first spatial mechanic — a Sprinkler
+ * waters its own plus-shape (own tile + the 4 orthogonal neighbours).
+ */
+export function isAutoWatered(t: Tile, tiles: Tile[]): boolean {
+  if (t.structure === 'sprinkler') return true;
+  return tiles.some(
+    (o) => o.structure === 'sprinkler' && Math.abs(o.r - t.r) + Math.abs(o.c - t.c) === 1,
+  );
+}
+
+/**
+ * True when a growing crop still needs watering tonight (not ripe, not wilted, not auto-watered
+ * by a sprinkler on this tile or an orthogonal neighbour). Needs the board for the adjacency check.
+ */
+export function needsWater(t: Tile, tiles: Tile[]): boolean {
   return (
     t.kind === 'tilled' &&
     !!t.crop &&
     !t.wilted &&
     t.stage < cropGrow(t.crop) &&
-    t.structure !== 'sprinkler' &&
+    !isAutoWatered(t, tiles) &&
     !t.watered
   );
 }
@@ -233,7 +262,8 @@ export interface NightResult {
 /**
  * Resolve one night of growth. Pure — returns a fresh board plus the growth/wilt
  * tallies for the sunrise summary. Rules (from the prototype):
- *  - a growing crop that is watered (or on a Sprinkler tile) advances one stage;
+ *  - a growing crop that is watered (or auto-watered by a Sprinkler on its own tile or an
+ *    orthogonal neighbour — see `isAutoWatered`) advances one stage;
  *  - an unwatered growing crop on a Scarecrow tile survives but does not grow;
  *  - any other unwatered growing crop wilts;
  *  - `watered` resets to false on every tile at dawn;
@@ -245,7 +275,8 @@ export function resolveNight(tiles: Tile[]): NightResult {
   const next = tiles.map((t) => {
     const nt: Tile = { ...t };
     if (nt.kind === 'tilled' && nt.crop && !nt.wilted && nt.stage < cropGrow(nt.crop)) {
-      const auto = nt.structure === 'sprinkler';
+      // Structures don't change overnight, so adjacency is read from the original board.
+      const auto = isAutoWatered(t, tiles);
       if (nt.watered || auto) {
         nt.stage += 1;
         grew += 1;

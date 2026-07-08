@@ -36,6 +36,11 @@ export interface PuzzleDef {
   startEnergy: number;
   /** Which crops the tap-radial offers in this puzzle (restricted for tutorials). */
   builds: CropId[];
+  /**
+   * Whether Feed (fertilize) is offered on a growing crop. Defaults to FALSE: the tutorials must
+   * not offer Feed (it trivialises their star tunings). Feed-centric puzzles opt in with `true`.
+   */
+  allowFeed?: boolean;
   /** Fresh board factory (a 3×3 = 9-tile board; the renderer/save assume 9). */
   makeBoard: () => Tile[];
 }
