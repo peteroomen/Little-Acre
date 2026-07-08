@@ -52,8 +52,9 @@ describe('PUZZLES integrity', () => {
   });
 
   it('makeBoard yields a fresh, empty 9-tile board with the right tilled count', () => {
+    // First Sprout starts on wild grass (0 tilled) so it teaches Till → Plant → Water.
     const counts: Record<string, number> = {
-      'first-sprout': 3,
+      'first-sprout': 0,
       'dry-spell': 4,
       'vine-and-again': 2,
     };
@@ -66,6 +67,11 @@ describe('PUZZLES integrity', () => {
       const tilled = a.filter((t) => t.kind === 'tilled').length;
       expect(tilled).toBe(counts[p.id]);
     }
+  });
+
+  it('First Sprout is all wild grass (Till comes first)', () => {
+    const board = getPuzzle('first-sprout')!.makeBoard();
+    expect(board.every((t) => t.kind === 'grass')).toBe(true);
   });
 
   it('getPuzzle resolves known ids and rejects unknown', () => {

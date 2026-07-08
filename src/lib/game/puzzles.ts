@@ -34,7 +34,7 @@ export interface PuzzleDef {
   startCoins: number;
   /** Starting energy, which is also the puzzle's max energy. */
   startEnergy: number;
-  /** Which builds the BuildPicker offers in this puzzle (restricted for tutorials). */
+  /** Which crops the tap-radial offers in this puzzle (restricted for tutorials). */
   builds: CropId[];
   /** Fresh board factory (a 3×3 = 9-tile board; the renderer/save assume 9). */
   makeBoard: () => Tile[];
@@ -77,14 +77,15 @@ export const PUZZLES: PuzzleDef[] = [
     id: 'first-sprout',
     name: 'First Sprout',
     blurb:
-      'Plant a seed, water it, then Sleep to pass the night. Water it again, and when it ripens, harvest. That is the whole rhythm of the farm.',
+      'This land is wild — Till it into soil first, then plant a seed, water it, and Sleep. Water again, and harvest when it ripens.',
     objective: { kind: 'harvest', crop: 'carrot', count: 3 },
     nightLimit: 4,
     stars: { three: 2, two: 3 },
     startCoins: 30,
     startEnergy: 16,
     builds: ['carrot'],
-    makeBoard: () => tilledBoard(3),
+    // Starts on wild grass so the player learns Till → Plant → Water → Harvest.
+    makeBoard: () => tilledBoard(0),
   },
   {
     id: 'dry-spell',

@@ -166,4 +166,40 @@ describe('resolveNight', () => {
     expect(input[0].stage).toBe(1);
     expect(input[0].watered).toBe(true);
   });
+
+  it('restocks a pond +2 fish, capped at 4', () => {
+    expect(
+      resolveNight([tile({ kind: 'pond', crop: null, pondStock: 0 })]).tiles[0].pondStock,
+    ).toBe(2);
+    expect(
+      resolveNight([tile({ kind: 'pond', crop: null, pondStock: 3 })]).tiles[0].pondStock,
+    ).toBe(4);
+    expect(
+      resolveNight([tile({ kind: 'pond', crop: null, pondStock: 4 })]).tiles[0].pondStock,
+    ).toBe(4);
+  });
+
+  it('counts a dormant rock down and re-charges it at 0', () => {
+    const step = (t: Tile) => resolveNight([t]).tiles[0];
+    const t1 = step(tile({ kind: 'rock', crop: null, rockCharges: 0, rockDormant: 3 }));
+    expect(t1).toMatchObject({ rockDormant: 2, rockCharges: 0 });
+    const t2 = step(t1);
+    expect(t2.rockDormant).toBe(1);
+    const t3 = step(t2);
+    expect(t3).toMatchObject({ rockDormant: 0, rockCharges: 3 });
+    // A ready rock (dormant 0, charged) is untouched.
+    expect(step(tile({ kind: 'rock', crop: null, rockCharges: 3, rockDormant: 0 }))).toMatchObject({
+      rockCharges: 3,
+      rockDormant: 0,
+    });
+  });
+});
+
+describe('createBoard gathering stock', () => {
+  it('stocks the pond (4 fish) and the rock (3 charges, ready)', () => {
+    const board = createBoard();
+    const at = (r: number, c: number) => board[r * 3 + c];
+    expect(at(2, 0)).toMatchObject({ kind: 'pond', pondStock: 4 });
+    expect(at(0, 0)).toMatchObject({ kind: 'rock', rockCharges: 3, rockDormant: 0 });
+  });
 });

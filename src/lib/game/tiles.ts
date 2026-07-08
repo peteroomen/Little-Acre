@@ -8,8 +8,6 @@
  * port and are still being modelled — see docs/design/GDD.md "Open questions".
  */
 
-export type Tool = 'click' | 'build';
-
 export type TileKind = 'grass' | 'tilled' | 'pond' | 'rock' | 'flower';
 export type CropId = 'carrot' | 'potato' | 'tomato';
 export type LandId = 'plot' | 'flower' | 'pond' | 'rock';
@@ -114,7 +112,21 @@ export interface Tile {
   watered: boolean;
   wilted: boolean;
   structure: StructId | null;
+  /** Pond only: fish left to catch. Refills +2/night up to 4; an empty pond can't be fished. */
+  pondStock?: number;
+  /** Rock only: mining pulls left before it goes dormant (starts at 3). */
+  rockCharges?: number;
+  /** Rock only: nights until a spent rock re-charges (0 = ready). */
+  rockDormant?: number;
 }
+
+/** Fish a full pond holds (also its per-night refill ceiling). */
+export const POND_MAX = 4;
+export const POND_REFILL = 2;
+/** Mining pulls a fresh rock holds before it goes dormant. */
+export const ROCK_CHARGES = 3;
+/** Nights a spent rock stays dormant before re-charging. */
+export const ROCK_DORMANT_NIGHTS = 3;
 
 export const BOARD_ROWS = 3;
 export const BOARD_COLS = 3;
@@ -137,7 +149,7 @@ export function createBoard(): Tile[] {
       const kind = parts[0] as TileKind;
       const crop = (parts[1] || null) as CropId | null;
       const stage = parts[2] ? parseInt(parts[2], 10) : 0;
-      tiles.push({
+      const tile: Tile = {
         r,
         c,
         kind,
@@ -147,7 +159,14 @@ export function createBoard(): Tile[] {
         watered: false,
         wilted: false,
         structure: null,
-      });
+      };
+      // Gathering nodes start stocked (see resolveNight for the per-night regen).
+      if (kind === 'pond') tile.pondStock = POND_MAX;
+      if (kind === 'rock') {
+        tile.rockCharges = ROCK_CHARGES;
+        tile.rockDormant = 0;
+      }
+      tiles.push(tile);
     }
   }
   return tiles;
@@ -217,7 +236,8 @@ export interface NightResult {
  *  - a growing crop that is watered (or on a Sprinkler tile) advances one stage;
  *  - an unwatered growing crop on a Scarecrow tile survives but does not grow;
  *  - any other unwatered growing crop wilts;
- *  - `watered` resets to false on every tile at dawn.
+ *  - `watered` resets to false on every tile at dawn;
+ *  - ponds restock +2 fish (cap 4); a dormant rock counts down and re-charges at 0.
  */
 export function resolveNight(tiles: Tile[]): NightResult {
   let grew = 0;
@@ -237,6 +257,13 @@ export function resolveNight(tiles: Tile[]): NightResult {
       }
     }
     nt.watered = false;
+    // Gathering nodes recover overnight so fishing/mining stay tended, not infinite.
+    if (nt.kind === 'pond')
+      nt.pondStock = Math.min(POND_MAX, (nt.pondStock ?? POND_MAX) + POND_REFILL);
+    if (nt.kind === 'rock' && (nt.rockDormant ?? 0) > 0) {
+      nt.rockDormant = (nt.rockDormant ?? 0) - 1;
+      if (nt.rockDormant === 0) nt.rockCharges = ROCK_CHARGES;
+    }
     return nt;
   });
   return { tiles: next, grew, wilted };

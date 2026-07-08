@@ -1,4 +1,4 @@
-import { CROPS, createBoard, type CropId, type Tile } from './tiles';
+import { CROPS, createBoard, POND_MAX, ROCK_CHARGES, type CropId, type Tile } from './tiles';
 import { normalizeUpgrades, type UpgradeLevels } from './upgrades';
 
 /**
@@ -10,8 +10,10 @@ import { normalizeUpgrades, type UpgradeLevels } from './upgrades';
  * v2: tiles gained `harvests` (re-yield); the Tier-1 crop set replaced the prototype's
  * crops, so any unknown crop id from an older save is cleared by `normalizeTile`.
  * v3: added `upgrades` (purchasable levels); backfilled to zero for older saves.
+ * v4: gathering nodes gained `pondStock` / `rockCharges` / `rockDormant`; `normalizeTile`
+ *     backfills them (pond 4, rock 3 charges, 0 dormant) so older saves start stocked.
  */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 const SAVE_KEY = 'little-acre-v1';
 /** Puzzle best-stars live in their OWN key so an ephemeral puzzle never touches the farm save. */
 const PUZZLE_KEY = 'little-acre-puzzles';
@@ -122,15 +124,20 @@ function numOr(v: unknown, fallback: number): number {
 function normalizeTile(raw: Partial<Tile>): Tile {
   const cropValid = typeof raw.crop === 'string' && raw.crop in CROPS;
   const crop = cropValid ? (raw.crop as CropId) : null;
+  const kind = raw.kind ?? 'grass';
   return {
     r: numOr(raw.r, 0),
     c: numOr(raw.c, 0),
-    kind: raw.kind ?? 'grass',
+    kind,
     crop,
     stage: crop ? numOr(raw.stage, 0) : 0,
     harvests: crop ? numOr(raw.harvests, 0) : 0,
     watered: !!raw.watered,
     wilted: crop ? !!raw.wilted : false,
     structure: raw.structure ?? null,
+    // v4: gathering-node stock backfills so older saves (and non-node tiles) round-trip.
+    pondStock: kind === 'pond' ? numOr(raw.pondStock, POND_MAX) : undefined,
+    rockCharges: kind === 'rock' ? numOr(raw.rockCharges, ROCK_CHARGES) : undefined,
+    rockDormant: kind === 'rock' ? numOr(raw.rockDormant, 0) : undefined,
   };
 }

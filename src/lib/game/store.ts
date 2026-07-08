@@ -9,22 +9,22 @@ import {
   type SaveState,
 } from './save';
 import { getPuzzle, registerHarvest, registerNight, starsFor, type PuzzleState } from './puzzles';
+import { actionsFor, type ActionCtx, type TileAction } from './actions';
 import {
   CROPS,
   LAND,
   STRUCT,
+  ROCK_DORMANT_NIGHTS,
   createBoard,
   cropGrow,
   harvestPatch,
   harvestValue,
   isCrop,
-  isLand,
-  isRipe,
   resolveNight,
-  type BuildId,
   type CropId,
+  type LandId,
+  type StructId,
   type Tile,
-  type Tool,
 } from './tiles';
 import {
   ENERGY_PER_LEVEL,
@@ -58,7 +58,19 @@ export interface Toast {
  * frame (mirrors the imperative-render discipline in CLAUDE.md).
  */
 export type FxKind =
-  'none' | 'nudge' | 'water' | 'plant' | 'harvest' | 'clear' | 'fish' | 'mine' | 'place' | 'build';
+  | 'none'
+  | 'nudge'
+  | 'water'
+  | 'plant'
+  | 'harvest'
+  | 'clear'
+  | 'fish'
+  | 'mine'
+  | 'place'
+  | 'build'
+  | 'till'
+  | 'fertilize'
+  | 'uproot';
 
 export interface ActionResult {
   fx: FxKind;
@@ -109,8 +121,17 @@ export interface GameState {
   // ── ui state ──
   phase: 'day' | 'night';
   night: NightInfo;
-  tool: Tool;
-  selectedBuild: BuildId;
+  /** Open press-hold radial (null = none). Anchored at tile (r,c), centred at canvas (cx,cy). */
+  radial: {
+    r: number;
+    c: number;
+    cx: number;
+    cy: number;
+    primary: TileAction | null;
+    ring: TileAction[];
+  } | null;
+  /** Highlighted ring slice (-1 = centre / primary). */
+  radialHi: number;
   storeOpen: boolean;
   storeTab: StoreTab;
   toasts: Toast[];
@@ -127,9 +148,11 @@ export interface GameState {
   goPuzzleSelect: () => void;
   retryPuzzle: () => void;
   dismissPuzzleIntro: () => void;
-  setTool: (tool: Tool) => void;
-  setSelectedBuild: (id: BuildId) => void;
-  useTool: (r: number, c: number) => ActionResult;
+  /** Begin a tap on tile (r,c), centred at canvas (cx,cy): runs a lone action or opens the radial. */
+  beginTap: (r: number, c: number, cx: number, cy: number) => ActionResult;
+  setRadialHi: (i: number) => void;
+  commitRadial: () => ActionResult;
+  closeRadial: () => void;
   sleep: () => void;
   buyUpgrade: (id: UpgradeId) => void;
   rebloom: () => void;
@@ -205,135 +228,165 @@ export const useGameStore = create<GameState>((set, get) => {
     set({ puzzle: patch });
   };
 
-  const clickTile = (t: Tile): ActionResult => {
-    const { r, c } = t;
-    // Harvest a ripe crop — free (no energy), the payoff moment. Re-yield crops re-ripen
-    // instead of clearing (see harvestPatch).
-    if (isRipe(t)) {
-      const crop = t.crop!;
-      const gain = harvestValue(crop, get().bloom * harvestMultFor(get().upgrades));
-      set((s) => ({ coins: s.coins + gain }));
-      patchTile(r, c, harvestPatch(t));
-      trackPuzzleHarvest(crop);
-      return { fx: 'harvest', r, c, gain, color: CROPS[crop].color };
-    }
-    // Clear a wilted crop (costs energy).
-    if (t.kind === 'tilled' && t.crop && t.wilted) {
-      if (!spend(1)) return NONE;
-      patchTile(r, c, { crop: null, wilted: false, stage: 0 });
-      get().toast('Cleared', 'ok');
-      return { fx: 'clear', r, c, color: '#a08a63' };
-    }
-    // Water a growing crop (below its ripen threshold — not the old fixed stage 3).
-    if (t.kind === 'tilled' && t.crop && !t.wilted && t.stage < cropGrow(t.crop)) {
-      if (t.structure === 'sprinkler') {
-        get().toast('Sprinkler waters this', 'bad');
-        return { fx: 'nudge', r, c };
-      }
-      if (t.watered) return { fx: 'nudge', r, c };
-      if (!spend(1)) return NONE;
-      patchTile(r, c, { watered: true });
-      get().toast('Watered', 'ok');
-      return { fx: 'water', r, c };
-    }
-    // Fish a pond.
-    if (t.kind === 'pond') {
-      if (!spend(1)) return NONE;
-      const gain = 12 + Math.floor(Math.random() * 20);
-      set((s) => ({ coins: s.coins + gain }));
-      markSeen('fish');
-      get().toast('Caught a fish!', 'ok');
-      return { fx: 'fish', r, c, gain };
-    }
-    // Mine a rock — coins plus a chance at a gem.
-    if (t.kind === 'rock') {
-      if (!spend(1)) return NONE;
-      const gain = 8 + Math.floor(Math.random() * 12);
-      const gem = Math.random() < 0.22 ? 1 : 0;
-      set((s) => ({ coins: s.coins + gain, gems: s.gems + gem }));
-      markSeen('ore');
-      if (gem) markSeen('gem');
-      get().toast(gem ? 'Struck a gem! +1' : 'Mined ore', 'ok');
-      return { fx: 'mine', r, c, gain, gem, color: '#cfc6ac' };
-    }
-    // Nothing to do here.
-    if (t.kind === 'grass') get().toast('Use Build to expand here', 'bad');
-    else if (t.kind === 'tilled' && !t.crop) get().toast('Use Build to plant', 'bad');
-    return { fx: 'nudge', r, c };
+  /** The action context for the active run: which crops/structures/land a tile may offer. */
+  const ctxFromState = (): ActionCtx => {
+    const s = get();
+    const crops =
+      s.mode === 'puzzle' && s.puzzle
+        ? (getPuzzle(s.puzzle.id)?.builds ?? []).filter(isCrop)
+        : (Object.keys(CROPS) as CropId[]);
+    return { crops, allowStructures: s.mode === 'freeplay', allowLand: s.mode === 'freeplay' };
   };
 
-  const placeLand = (t: Tile): ActionResult => {
-    const { r, c } = t;
-    if (t.kind !== 'grass') {
-      get().toast('Place land on empty grass', 'bad');
-      return { fx: 'nudge', r, c };
-    }
-    const sel = get().selectedBuild;
-    const ld = LAND[sel as keyof typeof LAND];
-    if (get().coins < ld.cost) {
+  /** Can the player afford `n` coins? Toasts on a shortfall. */
+  const affordCoins = (n: number): boolean => {
+    if (n <= 0) return true;
+    if (get().coins < n) {
       get().toast('Not enough coins', 'bad');
-      return { fx: 'nudge', r, c };
+      return false;
     }
-    if (!spend(1)) return NONE;
-    set((s) => ({ coins: s.coins - ld.cost }));
-    patchTile(r, c, {
-      kind: ld.kind,
-      crop: null,
-      stage: 0,
-      harvests: 0,
-      watered: false,
-      wilted: false,
-      structure: null,
-    });
-    markSeen(sel);
-    get().toast(`Placed ${ld.name}`, 'ok');
-    return { fx: 'place', r, c, cost: ld.cost, color: ld.color };
+    return true;
   };
 
-  const buildOn = (t: Tile): ActionResult => {
+  /**
+   * Execute a chosen tile action. One switch over ActionKind that folds in every verb's
+   * coin+energy check, tile patch, toast, and fx result — the single executor behind both a
+   * bare tap and a radial commit. Callers persist via save() afterwards.
+   */
+  const execAction = (t: Tile, a: TileAction): ActionResult => {
     const { r, c } = t;
-    const sel = get().selectedBuild;
-    if (isCrop(sel)) {
-      if (t.kind !== 'tilled') {
-        get().toast('Plant crops on soil', 'bad');
-        return { fx: 'nudge', r, c };
+    switch (a.kind) {
+      case 'till': {
+        if (!spend(a.energyCost)) return NONE;
+        patchTile(r, c, {
+          kind: 'tilled',
+          crop: null,
+          stage: 0,
+          harvests: 0,
+          watered: false,
+          wilted: false,
+          structure: null,
+        });
+        get().toast('Tilled soil', 'ok');
+        return { fx: 'till', r, c, color: a.color };
       }
-      if (t.crop) {
-        get().toast('Already planted', 'bad');
-        return { fx: 'nudge', r, c };
+      case 'plant': {
+        const crop = a.build as CropId;
+        const cd = CROPS[crop];
+        if (!affordCoins(a.coinCost)) return { fx: 'nudge', r, c };
+        if (!spend(a.energyCost)) return NONE;
+        set((s) => ({ coins: s.coins - a.coinCost }));
+        patchTile(r, c, { crop, stage: 0, harvests: 0, watered: false, wilted: false });
+        markSeen(crop);
+        get().toast(`Planted ${cd.name}`, 'ok');
+        return { fx: 'plant', r, c, cost: a.coinCost, color: cd.leaf };
       }
-      const cd = CROPS[sel];
-      if (get().coins < cd.cost) {
-        get().toast('Not enough coins', 'bad');
-        return { fx: 'nudge', r, c };
+      case 'water': {
+        if (!spend(a.energyCost)) return NONE;
+        patchTile(r, c, { watered: true });
+        get().toast('Watered', 'ok');
+        return { fx: 'water', r, c };
       }
-      if (!spend(1)) return NONE;
-      set((s) => ({ coins: s.coins - cd.cost }));
-      patchTile(r, c, { crop: sel, stage: 0, harvests: 0, watered: false, wilted: false });
-      markSeen(sel);
-      get().toast(`Planted ${cd.name}`, 'ok');
-      return { fx: 'plant', r, c, cost: cd.cost, color: cd.leaf };
+      case 'fertilize': {
+        if (!affordCoins(a.coinCost)) return { fx: 'nudge', r, c };
+        if (!spend(a.energyCost)) return NONE;
+        set((s) => ({ coins: s.coins - a.coinCost }));
+        const crop = t.crop!;
+        // Feeding advances one growth stage (can ripen it) — the fertilize verb's first real home.
+        patchTile(r, c, { stage: Math.min(cropGrow(crop), t.stage + 1) });
+        markSeen('fertilize');
+        get().toast('Fed the crop', 'ok');
+        return { fx: 'fertilize', r, c, cost: a.coinCost, color: a.color };
+      }
+      case 'harvest': {
+        const crop = t.crop!;
+        const gain = harvestValue(crop, get().bloom * harvestMultFor(get().upgrades));
+        set((s) => ({ coins: s.coins + gain }));
+        patchTile(r, c, harvestPatch(t));
+        trackPuzzleHarvest(crop);
+        return { fx: 'harvest', r, c, gain, color: CROPS[crop].color };
+      }
+      case 'uproot': {
+        // Pull a growing/ripe crop with no refund (energyCost 0 — it's a cleanup, not a chore).
+        if (a.energyCost > 0 && !spend(a.energyCost)) return NONE;
+        patchTile(r, c, { crop: null, stage: 0, harvests: 0, watered: false, wilted: false });
+        get().toast('Uprooted', 'ok');
+        return { fx: 'uproot', r, c, color: a.color };
+      }
+      case 'clear': {
+        if (!spend(a.energyCost)) return NONE;
+        patchTile(r, c, { crop: null, wilted: false, stage: 0, harvests: 0 });
+        get().toast('Cleared', 'ok');
+        return { fx: 'clear', r, c, color: a.color };
+      }
+      case 'fish': {
+        if ((t.pondStock ?? 0) <= 0) {
+          get().toast('The pond needs to restock', 'bad');
+          return { fx: 'nudge', r, c };
+        }
+        if (!spend(a.energyCost)) return NONE;
+        const gain = 12 + Math.floor(Math.random() * 20);
+        set((s) => ({ coins: s.coins + gain }));
+        patchTile(r, c, { pondStock: (t.pondStock ?? 0) - 1 });
+        markSeen('fish');
+        get().toast('Caught a fish!', 'ok');
+        return { fx: 'fish', r, c, gain };
+      }
+      case 'mine': {
+        if ((t.rockCharges ?? 0) <= 0) {
+          get().toast('This rock is spent — it will recover', 'bad');
+          return { fx: 'nudge', r, c };
+        }
+        if (!spend(a.energyCost)) return NONE;
+        const charges = (t.rockCharges ?? 0) - 1;
+        const gain = 8 + Math.floor(Math.random() * 12);
+        const gem = Math.random() < 0.22 ? 1 : 0;
+        set((s) => ({ coins: s.coins + gain, gems: s.gems + gem }));
+        patchTile(r, c, {
+          rockCharges: charges,
+          rockDormant: charges <= 0 ? ROCK_DORMANT_NIGHTS : (t.rockDormant ?? 0),
+        });
+        markSeen('ore');
+        if (gem) markSeen('gem');
+        get().toast(gem ? 'Struck a gem! +1' : 'Mined ore', 'ok');
+        return { fx: 'mine', r, c, gain, gem, color: '#cfc6ac' };
+      }
+      case 'structure': {
+        const id = a.build as StructId;
+        const stc = STRUCT[id];
+        if (!affordCoins(a.coinCost)) return { fx: 'nudge', r, c };
+        if (!spend(a.energyCost)) return NONE;
+        set((s) => ({ coins: s.coins - a.coinCost }));
+        patchTile(r, c, { structure: id });
+        markSeen(id);
+        get().toast(`Built ${stc.name}`, 'ok');
+        return { fx: 'build', r, c, cost: a.coinCost, color: stc.color };
+      }
+      case 'land': {
+        const id = a.build as LandId;
+        const ld = LAND[id];
+        if (!affordCoins(a.coinCost)) return { fx: 'nudge', r, c };
+        if (!spend(a.energyCost)) return NONE;
+        set((s) => ({ coins: s.coins - a.coinCost }));
+        patchTile(r, c, {
+          kind: ld.kind,
+          crop: null,
+          stage: 0,
+          harvests: 0,
+          watered: false,
+          wilted: false,
+          structure: null,
+          pondStock: ld.kind === 'pond' ? 4 : undefined,
+          rockCharges: ld.kind === 'rock' ? 3 : undefined,
+          rockDormant: ld.kind === 'rock' ? 0 : undefined,
+        });
+        markSeen(id);
+        get().toast(`Placed ${ld.name}`, 'ok');
+        return { fx: 'place', r, c, cost: a.coinCost, color: ld.color };
+      }
+      default:
+        return NONE;
     }
-    // structure
-    const stc = STRUCT[sel as keyof typeof STRUCT];
-    if (t.kind !== 'tilled') {
-      get().toast(`${stc.name} goes on soil`, 'bad');
-      return { fx: 'nudge', r, c };
-    }
-    if (t.structure) {
-      get().toast(`Already has ${STRUCT[t.structure].name}`, 'bad');
-      return { fx: 'nudge', r, c };
-    }
-    if (get().coins < stc.cost) {
-      get().toast('Not enough coins', 'bad');
-      return { fx: 'nudge', r, c };
-    }
-    if (!spend(1)) return NONE;
-    set((s) => ({ coins: s.coins - stc.cost }));
-    patchTile(r, c, { structure: sel as keyof typeof STRUCT });
-    markSeen(sel);
-    get().toast(`Built ${stc.name}`, 'ok');
-    return { fx: 'build', r, c, cost: stc.cost, color: stc.color };
   };
 
   return {
@@ -345,8 +398,8 @@ export const useGameStore = create<GameState>((set, get) => {
 
     phase: 'day',
     night: { title: '', sub: '' },
-    tool: 'click',
-    selectedBuild: 'carrot',
+    radial: null,
+    radialHi: -1,
     storeOpen: false,
     storeTab: 'shop',
     toasts: [],
@@ -379,8 +432,8 @@ export const useGameStore = create<GameState>((set, get) => {
         puzzle: null,
         phase: 'day',
         night: { title: '', sub: '' },
-        tool: 'click',
-        selectedBuild: 'carrot',
+        radial: null,
+        radialHi: -1,
         storeOpen: false,
       });
     },
@@ -402,8 +455,8 @@ export const useGameStore = create<GameState>((set, get) => {
         upgrades: { ...ZERO_UPGRADES },
         phase: 'day',
         night: { title: '', sub: '' },
-        tool: 'build',
-        selectedBuild: def.builds[0],
+        radial: null,
+        radialHi: -1,
         storeOpen: false,
       });
     },
@@ -425,18 +478,39 @@ export const useGameStore = create<GameState>((set, get) => {
       if (run) set({ puzzle: { ...run, intro: false } });
     },
 
-    setTool: (tool) => set({ tool }),
-    setSelectedBuild: (id) => set({ selectedBuild: id }),
-
-    useTool: (r, c) => {
+    beginTap: (r, c, cx, cy) => {
       if (get().phase !== 'day') return NONE;
       const t = get().board[tileIndex(r, c)];
       if (!t) return NONE;
-      const result =
-        get().tool === 'click' ? clickTile(t) : dispatchBuild(get, t, placeLand, buildOn);
-      get().save();
-      return result;
+      const acts = actionsFor(t, ctxFromState());
+      // No secondary choices ⇒ run the lone default straight away; else open the radial.
+      if (acts.ring.length === 0) {
+        if (!acts.primary) return NONE;
+        const res = execAction(t, acts.primary);
+        get().save();
+        return res;
+      }
+      set({ radial: { r, c, cx, cy, primary: acts.primary, ring: acts.ring }, radialHi: -1 });
+      return NONE;
     },
+
+    setRadialHi: (i) => set({ radialHi: i }),
+
+    commitRadial: () => {
+      const radial = get().radial;
+      if (!radial) return NONE;
+      const hi = get().radialHi;
+      const a = hi < 0 ? radial.primary : radial.ring[hi];
+      set({ radial: null, radialHi: -1 });
+      if (!a) return NONE;
+      const t = get().board[tileIndex(radial.r, radial.c)];
+      if (!t) return NONE;
+      const res = execAction(t, a);
+      get().save();
+      return res;
+    },
+
+    closeRadial: () => set({ radial: null, radialHi: -1 }),
 
     sleep: () => {
       if (get().phase !== 'day') return;
@@ -550,15 +624,6 @@ export const useGameStore = create<GameState>((set, get) => {
     },
   };
 });
-
-function dispatchBuild(
-  get: () => GameState,
-  t: Tile,
-  placeLand: (t: Tile) => ActionResult,
-  buildOn: (t: Tile) => ActionResult,
-): ActionResult {
-  return isLand(get().selectedBuild) ? placeLand(t) : buildOn(t);
-}
 
 function applySave(set: (partial: Partial<GameState>) => void, save: SaveState): void {
   // Recompute maxEnergy from upgrade levels so a stale saved ceiling can't desync.
