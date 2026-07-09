@@ -3,8 +3,10 @@
 import {
   getPuzzle,
   isPuzzleUnlocked,
-  objectiveLabel,
-  objectiveTarget,
+  nextTier,
+  objectiveNoun,
+  starsFor,
+  tierTargets,
   type PuzzleDef,
   PUZZLES,
 } from '@/lib/game/puzzles';
@@ -32,12 +34,15 @@ export function ObjectiveBanner() {
   const def = getPuzzle(puzzle.id);
   if (!def) return null;
 
-  const target = objectiveTarget(def.objective);
   const isCoins = def.objective.kind === 'coins';
   const isToday = def.nightLimit === 0;
   const nightsShown = Math.min(puzzle.nightsUsed, def.nightLimit);
   const lastNight = !isToday && nightsShown >= def.nightLimit;
-  const pct = target > 0 ? Math.min(100, Math.round((puzzle.progress / target) * 100)) : 0;
+  // Meter + count track the NEXT unearned goal tier; the star pips show which tier that is.
+  const tier = nextTier(def, puzzle.progress);
+  const earned = starsFor(def, puzzle.progress);
+  const pct =
+    tier.target > 0 ? Math.min(100, Math.round((puzzle.progress / tier.target) * 100)) : 100;
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-[104px] z-[12] flex justify-center px-3">
@@ -50,8 +55,14 @@ export function ObjectiveBanner() {
           }}
         />
         <div className="min-w-0">
-          <div className="whitespace-nowrap text-[13px] font-semibold leading-tight text-[var(--la-ink)]">
-            {objectiveLabel(def.objective)}
+          <div className="flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold leading-tight text-[var(--la-ink)]">
+            <span>{objectiveNoun(def.objective)}</span>
+            {/* Goal-tier pips: filled up to the tier being chased (or all three once 3★ is in). */}
+            <span className="flex gap-[2px]">
+              {[1, 2, 3].map((i) => (
+                <PixelStar key={i} size={10} filled={i <= Math.max(earned, tier.stars)} />
+              ))}
+            </span>
           </div>
           <div className="mt-[3px] flex items-center gap-1.5">
             <div
@@ -73,7 +84,7 @@ export function ObjectiveBanner() {
               className="font-pixel text-[12px] leading-none"
               style={{ color: isCoins ? 'var(--la-coin-text)' : 'var(--la-grow-deep)' }}
             >
-              {puzzle.progress}/{target}
+              {puzzle.progress}/{tier.target}
             </span>
           </div>
         </div>
@@ -184,15 +195,7 @@ export function PuzzleResult() {
   const index = PUZZLES.findIndex((p) => p.id === puzzle.id);
   const next = PUZZLES[index + 1];
   const nextUnlocked = !!next && isPuzzleUnlocked(index + 1, puzzleStars);
-
-  // Par context line: 0-night puzzles race the dusk; the rest compare nights to the solver par.
-  const n = puzzle.nightsUsed;
-  const parLine =
-    def.nightLimit === 0
-      ? 'Done before dusk!'
-      : `Done in ${n} night${n === 1 ? '' : 's'} — par is ${def.stars.three}${
-          n <= def.stars.three ? '!' : '.'
-        }`;
+  const noun = objectiveNoun(def.objective).toLowerCase();
 
   return (
     <div
@@ -210,21 +213,23 @@ export function PuzzleResult() {
         }}
       >
         <div className="font-pixel text-[26px] font-bold text-[var(--la-text)]">
-          {won ? 'Harvest Home!' : 'Out of Nights'}
+          {won ? 'Harvest Home!' : def.nightLimit === 0 ? 'Cart Has Left' : 'Out of Nights'}
         </div>
 
         {won ? (
           <>
-            <div className="mb-1.5 mt-4 flex items-center justify-center gap-2.5">
+            <div className="mb-2 mt-4 flex items-center justify-center gap-2.5">
               <ResultStar index={0} filled={puzzle.stars > 0} size={38} />
               <ResultStar index={1} filled={puzzle.stars > 1} size={46} lifted />
               <ResultStar index={2} filled={puzzle.stars > 2} size={38} />
             </div>
-            <p className="font-pixel text-[15px] text-[var(--la-coin-text)]">{parLine}</p>
+            <GoalLadder def={def} earned={puzzle.stars} noun={noun} />
           </>
         ) : (
           <p className="mt-3 text-sm leading-relaxed text-[var(--la-body)]">
-            The dawn came too soon. Give it another go — try a different order.
+            {puzzle.progress > 0
+              ? `Only ${puzzle.progress} ${noun} — the first goal wants ${tierTargets(def)[0]}. Try a different order.`
+              : 'Give it another go — try a different order.'}
           </p>
         )}
 
@@ -253,6 +258,41 @@ export function PuzzleResult() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Result-modal goal ladder: the three tier targets (1★ base / 2★ / 3★) with the ones the player
+ * cleared lit. Shows what was hit and what's still on the table for a replay.
+ */
+function GoalLadder({ def, earned, noun }: { def: PuzzleDef; earned: number; noun: string }) {
+  const targets = tierTargets(def);
+  return (
+    <div className="mt-1 flex items-stretch justify-center gap-1.5">
+      {targets.map((target, i) => {
+        const hit = earned >= i + 1;
+        return (
+          <div
+            key={i}
+            className="la-notch-3 flex min-w-[54px] flex-col items-center gap-0.5 px-2 py-1.5"
+            style={{
+              background: hit ? 'var(--la-coin-soft)' : 'var(--la-meter-track)',
+              boxShadow: `inset 0 0 0 2px ${hit ? 'var(--la-gold-line)' : 'var(--la-meter-line)'}`,
+              opacity: hit ? 1 : 0.6,
+            }}
+          >
+            <PixelStar size={13} filled={hit} />
+            <span
+              className="font-pixel text-[13px] leading-none"
+              style={{ color: hit ? 'var(--la-coin-text)' : 'var(--la-muted-2)' }}
+            >
+              {target}
+            </span>
+          </div>
+        );
+      })}
+      <span className="sr-only">{noun} goals</span>
     </div>
   );
 }

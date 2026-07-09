@@ -1,25 +1,33 @@
-// Little Acre — puzzle par validation harness (v2, megaslice Wave 1).
+// Little Acre — puzzle GOAL-TIER validation harness (v3, megaslice 2 / S1).
 //
 // Usage:
-//   node scripts/check-puzzle-pars.mjs                 default: validate every shipped puzzle
-//                                                      def + the OLD-rules regression path
-//                                                      (< ~2 min; exits 1 on any failure)
-//   node scripts/check-puzzle-pars.mjs --strict        same checks (kept for CI compat; the
-//                                                      default is already strict)
+//   node scripts/check-puzzle-pars.mjs                 default: validate every shipped puzzle's
+//                                                      goal-tier ladder + the OLD-rules regression
+//                                                      (~1.5 min; exits 1 on any failure)
+//   node scripts/check-puzzle-pars.mjs --strict        alias, kept for CI compat (default is strict)
 //   node scripts/check-puzzle-pars.mjs --sweep-tomato  ALSO run the tomato regrow×reyield tuning
 //                                                      sweep (slower; informational, never fails)
 //
-// Default-run checks, per shipped puzzle (defs mirrored from src/lib/game/puzzles.ts — a plain
-// node script can't import TS, same convention as little-acre-model.mjs; keep in sync):
-//   1. PAR      — under the puzzle's own verb rules (allowFeed from the def; tutorials are OFF
-//      post-Wave-1), exact optimal nights must equal the recommended 3★ threshold.
-//   2. KNIFE-EDGE — the same scenario capped at 3★−1 nights must be INFEASIBLE. Any puzzle where
-//      it is feasible has slack (optimal beats par) and fails.
-//   3. SYNC     — when the recommendation differs from what src currently carries (vine-and-again
-//      after the tomato retune), print the stars integration must apply.
+// Stars are GOAL-TIERED on the objective metric (harvest count / coins earned), not on nights:
+// the objective count/amount is the 1★ base, and `stars.two` / `stars.three` are stretch progress
+// targets. 3★ is the exact solver-proven MAXIMUM within the night limit. Per shipped puzzle, under
+// its own verb rules (defs mirrored from src/lib/game/puzzles.ts — a plain node script can't import
+// TS; keep in sync):
+//   1. BASE FEASIBLE  — the 1★ base is reachable within nightLimit, with slack (for night puzzles,
+//      at least one night to spare; the actual slack is printed). Accessibility guard.
+//   2. LADDER         — base < two < three (a real, strictly-increasing ladder).
+//   3. TIER2 FEASIBLE — the 2★ target is reachable within nightLimit (implied by TIER3 under the
+//      monotone objective, but checked explicitly).
+//   4. TIER3 == MAX   — the 3★ target is reachable within nightLimit AND three+1 is INFEASIBLE, so
+//      3★ is exactly the optimal ceiling. This is where the optimization/knife-edge now lives.
 // Regression path: with the OLD tomato numbers (reyield 3 / regrow 2) injected via the cropDefs
-// override and feed off, the three tutorials must still solve to their original pars 2/3/6 —
-// this pins the solver itself against ground truth that predates the retune.
+// override and feed off, the three tutorials' maxima are re-pinned (first-sprout 9, dry-spell 6,
+// vine-and-again 4 — vs the new-tomato 8, the drop that proves the override path is live).
+//
+// waterworks NOTE: the solver models sprinkler-only (allowedStructures ['sprinkler']) for the tier
+// checks — the game also offers a scarecrow, but a scarecrow only prevents wilt (no watering, no
+// growth), so it can never raise a watering-throughput maximum. Modeling it would only slow the
+// spatial BFS. The "no sprinkler" lesson check below keeps hand-watering pinned.
 //
 // --sweep-tomato (WS-A acceptance evidence): sweep tomato regrow ∈ {1,2} × reyield ∈ {3,4,5} on
 //   (a) ENERGY-SCARCE — 6 tilled tiles, coins 40, target 12 any-crop, horizon 12 nights, at
@@ -28,30 +36,26 @@
 // Success criterion: some energy-scarce setting where tomato-only strictly beats carrot-only,
 // while carrot-only stays strictly better in the sprint. The sweep prints per-config verdicts
 // and whether the shipped {reyield 4, regrow 1} achieves the criterion.
-//
-// Known structural result (why E ∈ {4,5} is in the grid): at E=6/coins 40 NO tomato tuning can
-// strictly win — tomato's first fruit lands night 4 (grow 4, feed off) and 40c affords only 3
-// vines before the first sale, so 12 harvests can't complete before night 7... which carrot also
-// achieves. The tie only breaks when energy drops far enough to throttle carrot's replant loop
-// (E ≤ 5): carrot needs 3⚡/harvest sustained, a ripe vine only 1⚡.
 
 import { solve, tiles, OLD_CROPS, DEFAULT_CROPS } from './puzzle-solver.mjs';
 
 // ---- shipped puzzle defs (mirror of src/lib/game/puzzles.ts PUZZLES) -----------
-// `stars` is the recommendation this harness validates; `srcStars` is what the src def carries
-// today. They differ only while a retune is pending integration.
+// `base` is the objective count/amount (1★); `two`/`three` are the goal-tier progress targets.
+// Boards mirror the src makeBoard layouts with flower fillers OMITTED — flowers offer no verb, so
+// they don't exist to the solver. Grass IS modelled ('G' is tillable).
 const SHIPPED = [
   {
     id: 'first-sprout',
     board: tiles({ G: 9 }),
     coins: 30,
-    energy: 16,
+    energy: 10,
     builds: ['carrot'],
-    objective: { kind: 'harvest', crop: 'carrot', count: 3 },
+    objectiveCrop: 'carrot',
     nightLimit: 4,
     allowFeed: false,
-    srcStars: { three: 2, two: 3 },
-    stars: { three: 2, two: 3 },
+    base: 3,
+    two: 6,
+    three: 9,
   },
   {
     id: 'dry-spell',
@@ -59,95 +63,95 @@ const SHIPPED = [
     coins: 40,
     energy: 16,
     builds: ['potato'],
-    objective: { kind: 'harvest', crop: 'potato', count: 4 },
+    objectiveCrop: 'potato',
     nightLimit: 5,
     allowFeed: false,
-    srcStars: { three: 3, two: 4 },
-    stars: { three: 3, two: 4 },
+    base: 4,
+    two: 5,
+    three: 6,
   },
   {
+    // Two vine beds (flower borders → 2 solver tiles). Tomato re-yields 4 fruits, so 2 vines cap
+    // at 8 — the exact 3★. The lesson is re-yield, not expansion; feed off keeps the ladder honest.
     id: 'vine-and-again',
-    board: tiles({ E: 2, G: 7 }),
+    board: tiles({ E: 2 }),
     coins: 40,
     energy: 16,
     builds: ['tomato'],
-    objective: { kind: 'harvest', crop: 'tomato', count: 4 },
-    nightLimit: 9,
+    objectiveCrop: 'tomato',
+    nightLimit: 7,
     allowFeed: false,
-    // Tomato retune (reyield 4 / regrow 1) shortens the optimal line: coins 40 afford only 3
-    // vines (3×12c), so par is 4 watered nights to first ripe + 1 regrow night for the 4th
-    // fruit = 5. Applied to src/lib/game/puzzles.ts at Wave-1 integration.
-    srcStars: { three: 5, two: 6 },
-    stars: { three: 5, two: 6 },
+    base: 4,
+    two: 6,
+    three: 8,
   },
-  // ── challenge puzzles (megaslice Wave 2 / WS-B). Boards mirror the src makeBoard layouts with
-  // flower fillers OMITTED — flowers offer no verb, so they don't exist to the solver. Grass IS
-  // modelled ('G' is tillable). allowedStructures mirrors the def's allowStructures flag, which
-  // in-game gates BOTH sprinkler and scarecrow. ─────────────────────────────────
   {
-    // 0-night feed-chain speedrun: till→plant→feed×2→harvest→(plant→feed×2→harvest)×2 on one
-    // tile = 10⚡ / 20c working capital. The 0-night knife-edge has no night to shave, so the
-    // resource knife (9⚡ / 19c infeasible) is pinned in FEATURES below.
+    // 0-night feed-chain speedrun. All scoring on day 1 (End Day settles it). 13⚡ / 20c working
+    // capital: base 2 is relaxed (fund one carrot, sell, fund the next); 4 is the same-day max.
     id: 'market-day',
     board: tiles({ G: 3 }),
     coins: 20,
-    energy: 10,
+    energy: 13,
     builds: ['carrot'],
-    objective: { kind: 'harvest', crop: 'carrot', count: 3 },
+    objectiveCrop: 'carrot',
     nightLimit: 0,
     allowFeed: true,
-    srcStars: { three: 0, two: 0 },
-    stars: { three: 0, two: 0 },
+    base: 2,
+    two: 3,
+    three: 4,
   },
   {
-    // Pre-grown triage: ripe vine (3 fruits left) + stage-1 potato at 1⚡/day. The potato must
-    // be watered nights 1–2 while the ripe fruit HOLDS; par 4. Harvesting the vine immediately
-    // caps the board at 3 (pinned in FEATURES: the vine alone can't reach 4).
+    // Pre-grown triage: ripe vine (3 fruits left) + stage-1 potato at 1⚡/day. Ladder 2 / 3 / 4.
+    // 4 (max) demands HOLDING the ripe fruit while the potato is watered nights 1–2; cashing the
+    // vine early wilts the potato and caps at 3 (pinned in FEATURES).
     id: 'the-patient-vine',
     board: ['tomato:4:1', 'potato:1:0'],
     coins: 0,
     energy: 1,
     builds: [],
-    objective: { kind: 'harvest', crop: 'any', count: 4 },
+    objectiveCrop: 'any',
     nightLimit: 6,
     allowFeed: false,
-    srcStars: { three: 4, two: 5 },
-    stars: { three: 4, two: 5 },
+    base: 2,
+    two: 3,
+    three: 4,
   },
   {
-    // Bootstrap ladder: 4c = one carrot seed; its 20c sale (night 2) funds all 3 potato seeds,
-    // which ripen 3 nights later ⇒ par 5. Potato-only is infeasible (FEATURES) — the lesson.
+    // Bootstrap ladder: 4c = one carrot seed; its 20c sale bankrolls the potatoes. Ladder 3 / 5 / 6
+    // potatoes (base 3 lands night 5, 3 nights of slack; 6 needs a second replant cycle). Potato-
+    // only is infeasible (FEATURES) — the bootstrap is the lesson.
     id: 'seed-money',
     board: tiles({ E: 3 }),
     coins: 4,
     energy: 6,
     builds: ['carrot', 'potato'],
-    objective: { kind: 'harvest', crop: 'potato', count: 3 },
-    nightLimit: 7,
+    objectiveCrop: 'potato',
+    nightLimit: 8,
     allowFeed: false,
-    srcStars: { three: 5, two: 6 },
-    stars: { three: 5, two: 6 },
+    base: 3,
+    two: 5,
+    three: 6,
   },
   {
-    // Energy-scarce crop choice: 5⚡ throttles carrot's replant loop (3⚡/harvest sustained) while
-    // a ripe vine costs 1⚡/fruit. Mixed carrot+tomato par 7; carrot-only 9 and tomato-only 8 are
-    // pinned in FEATURES. (The Wave-1 sweep's "optimal 8" was tomato-ONLY — mixing beats it.)
+    // Energy-scarce crop choice: 5⚡ throttles carrot's replant loop while a ripe vine costs 1⚡/
+    // fruit — mixing is the lesson (carrot-only/tomato-only reach base 12 slower; FEATURES). Ladder
+    // 12 / 17 / 22; base 12 lands night 7 (3 nights of slack), 22 is the exact 10-night max.
     id: 'thirsty-work',
     board: tiles({ E: 6 }),
     coins: 40,
     energy: 5,
     builds: ['carrot', 'tomato'],
-    objective: { kind: 'harvest', crop: 'any', count: 12 },
+    objectiveCrop: 'any',
     nightLimit: 10,
     allowFeed: false,
-    srcStars: { three: 7, two: 8 },
-    stars: { three: 7, two: 8 },
+    base: 12,
+    two: 17,
+    three: 22,
   },
   {
-    // Sprinkler placement: 76c = one sprinkler (60c) + 4 carrot seeds exactly; 5⚡ = place + plant
-    // 4. Centre placement covers the whole plus ⇒ par 2. Hand-watering (no sprinkler), 75c, and
-    // 4⚡ are all pinned in FEATURES. Scarecrow is placeable too (allowStructures gates both) —
-    // it can't beat the sprinkler line, and the par run proves it.
+    // Sprinkler placement: a centre sprinkler waters the whole plus, so the arms ripen hands-free.
+    // Ladder 4 / 6 / 9 carrots (base 4 = one hands-free cycle at night 2; 9 = the exact 4-night max
+    // cycling replants). Solver models sprinkler-only (see header NOTE).
     id: 'waterworks',
     board: [
       { r: 0, c: 1, base: 'E', struct: '' },
@@ -159,12 +163,13 @@ const SHIPPED = [
     coins: 76,
     energy: 5,
     builds: ['carrot'],
-    allowedStructures: ['sprinkler', 'scarecrow'],
-    objective: { kind: 'harvest', crop: 'carrot', count: 4 },
+    allowedStructures: ['sprinkler'],
+    objectiveCrop: 'carrot',
     nightLimit: 4,
     allowFeed: false,
-    srcStars: { three: 2, two: 3 },
-    stars: { three: 2, two: 3 },
+    base: 4,
+    two: 6,
+    three: 9,
   },
 ];
 
@@ -172,67 +177,95 @@ const sweepMode = process.argv.includes('--sweep-tomato');
 let failed = false;
 const t0 = Date.now();
 
-// ---- 1..3: validate every shipped def under its own verb rules -----------------
-console.log('=== SHIPPED PUZZLES (current rules, per-def verb gating) ===');
-for (const p of SHIPPED) {
-  const base = {
+// Solve `p` for a given progress target within its night limit → minNights (null = infeasible).
+function solveTarget(p, target) {
+  return solve({
     tiles: p.board,
     coins: p.coins,
     energy: p.energy,
     builds: p.builds,
-    objective: p.objective,
+    objective: { kind: 'harvest', crop: p.objectiveCrop, count: target },
     allowFeed: p.allowFeed,
     allowedStructures: p.allowedStructures ?? [],
-  };
-  const par = solve({ ...base, maxNights: p.nightLimit }).minNights;
-  const parOk = par === p.stars.three;
-  // Knife-edge: one fewer night than the 3★ threshold must be impossible. Feasibility here
-  // means the puzzle has slack — optimal play beats the authored par.
-  const knife =
-    p.stars.three === 0 ? null : solve({ ...base, maxNights: p.stars.three - 1 }).minNights;
-  const knifeOk = knife === null;
-  if (!parOk || !knifeOk) failed = true;
-
-  const knifeMsg =
-    p.stars.three === 0
-      ? 'skipped (0-night par — resource knives pinned in FEATURES)'
-      : `knife-edge(${p.stars.three - 1}n)=${knifeOk ? 'infeasible OK' : `FEASIBLE (slack!) FAIL`}`;
-  console.log(
-    `${p.id.padEnd(16)} optimal=${par ?? 'infeasible'} vs 3★=${p.stars.three}  ${parOk ? 'OK' : 'FAIL'}   ${knifeMsg}`,
-  );
-  if (p.stars.three !== p.srcStars.three || p.stars.two !== p.srcStars.two) {
-    console.log(
-      `${''.padEnd(16)} SYNC: src carries {three:${p.srcStars.three}, two:${p.srcStars.two}} — ` +
-        `update to {three:${p.stars.three}, two:${p.stars.two}} at integration.`,
-    );
-  }
+    maxNights: p.nightLimit,
+  }).minNights;
 }
 
-// ---- regression path: OLD tomato numbers must reproduce the original pars ------
-console.log('\n=== REGRESSION (old tomato reyield 3 / regrow 2, feed off) ===');
-// Only the three tutorials predate the retune — the Wave-2 challenges have no old-rules par.
-const OLD_PARS = { 'first-sprout': 2, 'dry-spell': 3, 'vine-and-again': 6 };
+// ---- goal-tier validation: base feasible+slack · ladder · tier2 feasible · tier3 == max --------
+console.log('=== SHIPPED PUZZLES (goal-tier ladders, per-def verb gating) ===');
 for (const p of SHIPPED) {
-  if (!(p.id in OLD_PARS)) continue;
-  const par = solve({
+  const baseN = solveTarget(p, p.base);
+  const twoN = solveTarget(p, p.two);
+  const threeN = solveTarget(p, p.three);
+  const overN = solveTarget(p, p.three + 1);
+
+  const ladderOk = p.base < p.two && p.two < p.three;
+  const baseFeasible = baseN !== null;
+  // Slack: night puzzles want ≥1 night to spare; 0-night puzzles lean on energy/coin slack instead.
+  const slack = baseFeasible && p.nightLimit > 0 ? p.nightLimit - baseN : null;
+  const slackOk = p.nightLimit === 0 ? baseFeasible : baseFeasible && slack >= 1;
+  const twoFeasible = twoN !== null;
+  const threeIsMax = threeN !== null && overN === null;
+
+  const ok = ladderOk && baseFeasible && slackOk && twoFeasible && threeIsMax;
+  if (!ok) failed = true;
+
+  const slackMsg =
+    p.nightLimit === 0
+      ? 'base@day1 (energy slack)'
+      : baseFeasible
+        ? `base@${baseN}n (slack ${slack})`
+        : 'base INFEASIBLE';
+  console.log(
+    `${p.id.padEnd(16)} ${p.base}/${p.two}/${p.three}  ${slackMsg}  ` +
+      `2★@${twoN ?? 'inf'}n  3★@${threeN ?? 'inf'}n max(${p.three + 1}=${overN ?? 'inf'})  ` +
+      `${ok ? 'OK' : 'FAIL'}`,
+  );
+  if (!ladderOk) console.log(`${''.padEnd(16)} FAIL: ladder not strictly base<two<three`);
+  if (!slackOk) console.log(`${''.padEnd(16)} FAIL: base lacks slack`);
+  if (!twoFeasible) console.log(`${''.padEnd(16)} FAIL: 2★ target infeasible`);
+  if (!threeIsMax)
+    console.log(`${''.padEnd(16)} FAIL: 3★ is not the exact max (3★ ${threeN}, 3★+1 ${overN})`);
+}
+
+// ---- regression path: OLD tomato numbers re-pin the tutorial maxima -------------
+// Exercises the cropDefs override path. Under old tomato (reyield 3 / regrow 2) the vine tutorial's
+// max DROPS from 8 to 4 — the carrot/potato tutorials are unaffected (9 / 6), proving the override
+// only bites the tomato math.
+console.log('\n=== REGRESSION (old tomato reyield 3 / regrow 2, feed off) ===');
+const OLD_MAX = { 'first-sprout': 9, 'dry-spell': 6, 'vine-and-again': 4 };
+for (const p of SHIPPED) {
+  if (!(p.id in OLD_MAX)) continue;
+  const m = OLD_MAX[p.id];
+  const at = solve({
     tiles: p.board,
     coins: p.coins,
     energy: p.energy,
     builds: p.builds,
-    objective: p.objective,
+    objective: { kind: 'harvest', crop: p.objectiveCrop, count: m },
     allowFeed: false,
     maxNights: p.nightLimit,
     cropDefs: OLD_CROPS,
   }).minNights;
-  const ok = par === OLD_PARS[p.id];
+  const over = solve({
+    tiles: p.board,
+    coins: p.coins,
+    energy: p.energy,
+    builds: p.builds,
+    objective: { kind: 'harvest', crop: p.objectiveCrop, count: m + 1 },
+    allowFeed: false,
+    maxNights: p.nightLimit,
+    cropDefs: OLD_CROPS,
+  }).minNights;
+  const ok = at !== null && over === null;
   if (!ok) failed = true;
   console.log(
-    `${p.id.padEnd(16)} old-rules optimal=${par ?? 'infeasible'} vs ${OLD_PARS[p.id]}  ${ok ? 'OK' : 'FAIL'}`,
+    `${p.id.padEnd(16)} old-rules max=${m}: ${m}@${at ?? 'inf'}n, ${m + 1}=${over ?? 'inf'}  ${ok ? 'OK' : 'FAIL'}`,
   );
 }
 
-// ---- solver feature checks (pinned ground truth for the v2 capabilities) -------
-console.log('\n=== SOLVER FEATURE CHECKS (spatial / pause / gathering / coin-earned) ===');
+// ---- solver feature checks (pinned ground truth + per-puzzle lessons) -----------
+console.log('\n=== SOLVER FEATURE CHECKS (spatial / pause / gathering / coin-earned / lessons) ===');
 const plus = (struct) => [
   { r: 1, c: 1, base: 'E', struct },
   { r: 0, c: 1, base: 'E', struct: '' },
@@ -245,10 +278,16 @@ const trio = (struct) => [
   { r: 0, c: 1, base: 'potato:2:0', struct: '' },
   { r: 0, c: 2, base: 'potato:2:0', struct },
 ];
+const waterCells = [
+  { r: 0, c: 1, base: 'E', struct: '' },
+  { r: 1, c: 0, base: 'E', struct: '' },
+  { r: 1, c: 1, base: 'E', struct: '' },
+  { r: 1, c: 2, base: 'E', struct: '' },
+  { r: 2, c: 1, base: 'E', struct: '' },
+];
 const FEATURES = [
   {
-    // E=4 only plants 4 carrots on day 0 — they ripen hands-free because the centre sprinkler
-    // waters the whole plus every night.
+    // Centre sprinkler waters the whole plus every night → 4 carrots ripen hands-free by night 2.
     name: 'sprinkler plus-coverage (pre-placed)',
     expect: 2,
     cfg: {
@@ -277,8 +316,7 @@ const FEATURES = [
     },
   },
   {
-    // 3 near-ripe potatoes but only 2⚡: the scarecrow tile PAUSES its unwatered crop (no wilt),
-    // so it ripens a night late instead of dying.
+    // 3 near-ripe potatoes but only 2⚡: the scarecrow tile PAUSES its unwatered crop (no wilt).
     name: 'scarecrow pause banks the 3rd potato',
     expect: 2,
     cfg: {
@@ -349,39 +387,10 @@ const FEATURES = [
       allowFeed: false,
     },
   },
-  // ── Wave-2 challenge knife-edges + lessons (WS-B). The 0-night market-day par can't shave a
-  // night, so its knife-edge is pinned on resources instead; the others pin each puzzle's lesson.
+  // ── per-puzzle lesson pins ───────────────────────────────────────────────────
   {
-    // Market Day resource knife 1: one fewer energy breaks the 10⚡ feed-chain line.
-    name: 'market-day: 9 energy infeasible',
-    expect: null,
-    cfg: {
-      tiles: tiles({ G: 3 }),
-      coins: 20,
-      energy: 9,
-      builds: ['carrot'],
-      objective: { kind: 'harvest', crop: 'carrot', count: 3 },
-      maxNights: 0,
-      allowFeed: true,
-    },
-  },
-  {
-    // Market Day resource knife 2: one fewer coin breaks the 20c working-capital loop.
-    name: 'market-day: 19 coins infeasible',
-    expect: null,
-    cfg: {
-      tiles: tiles({ G: 3 }),
-      coins: 19,
-      energy: 10,
-      builds: ['carrot'],
-      objective: { kind: 'harvest', crop: 'carrot', count: 3 },
-      maxNights: 0,
-      allowFeed: true,
-    },
-  },
-  {
-    // Patient Vine lesson: the vine alone caps at its 3 remaining fruits — cashing it early
-    // (potato wilts) can never reach 4. Holding the ripe fruit while the potato ripens is forced.
+    // Patient Vine lesson: the vine alone caps at its 3 remaining fruits — reaching 4 (the 3★)
+    // REQUIRES holding the ripe fruit while the potato ripens.
     name: 'patient-vine: vine alone caps at 3',
     expect: null,
     cfg: {
@@ -409,8 +418,8 @@ const FEATURES = [
     },
   },
   {
-    // Thirsty Work lesson (a): carrot-only is 2 nights slower than the mixed par of 7.
-    name: 'thirsty-work: carrot-only takes 9',
+    // Thirsty Work lesson (a): carrot-only reaches the base 12 two nights slower than the mixed 7.
+    name: 'thirsty-work: carrot-only 12 takes 9',
     expect: 9,
     cfg: {
       tiles: tiles({ E: 6 }),
@@ -423,8 +432,8 @@ const FEATURES = [
     },
   },
   {
-    // Thirsty Work lesson (b): tomato-only takes 8 — mixing the two is what makes par.
-    name: 'thirsty-work: tomato-only takes 8',
+    // Thirsty Work lesson (b): tomato-only reaches 12 in 8 — mixing (7) beats both mono-crops.
+    name: 'thirsty-work: tomato-only 12 takes 8',
     expect: 8,
     cfg: {
       tiles: tiles({ E: 6 }),
@@ -437,17 +446,12 @@ const FEATURES = [
     },
   },
   {
-    // Waterworks lesson: no sprinkler ⇒ hand-watering at 5⚡ doubles the nights (4 vs par 2).
-    name: 'waterworks: no sprinkler takes 4',
+    // Waterworks lesson: no sprinkler ⇒ hand-watering at 5⚡ takes 4 nights to reach the base 4
+    // (vs the hands-free 2) — the sprinkler is what makes the base accessible.
+    name: 'waterworks: base 4 no-sprinkler takes 4',
     expect: 4,
     cfg: {
-      tiles: [
-        { r: 0, c: 1, base: 'E', struct: '' },
-        { r: 1, c: 0, base: 'E', struct: '' },
-        { r: 1, c: 1, base: 'E', struct: '' },
-        { r: 1, c: 2, base: 'E', struct: '' },
-        { r: 2, c: 1, base: 'E', struct: '' },
-      ],
+      tiles: waterCells,
       coins: 76,
       energy: 5,
       builds: ['carrot'],
@@ -455,48 +459,6 @@ const FEATURES = [
       spatial: true,
       objective: { kind: 'harvest', crop: 'carrot', count: 4 },
       maxNights: 4,
-      allowFeed: false,
-    },
-  },
-  {
-    // Waterworks resource knife 1: 75c can't afford sprinkler + all four seeds within par.
-    name: 'waterworks: 75 coins misses par',
-    expect: null,
-    cfg: {
-      tiles: [
-        { r: 0, c: 1, base: 'E', struct: '' },
-        { r: 1, c: 0, base: 'E', struct: '' },
-        { r: 1, c: 1, base: 'E', struct: '' },
-        { r: 1, c: 2, base: 'E', struct: '' },
-        { r: 2, c: 1, base: 'E', struct: '' },
-      ],
-      coins: 75,
-      energy: 5,
-      builds: ['carrot'],
-      allowedStructures: ['sprinkler', 'scarecrow'],
-      objective: { kind: 'harvest', crop: 'carrot', count: 4 },
-      maxNights: 2,
-      allowFeed: false,
-    },
-  },
-  {
-    // Waterworks resource knife 2: 4⚡ can't place the sprinkler AND plant all four on day 0.
-    name: 'waterworks: 4 energy misses par',
-    expect: null,
-    cfg: {
-      tiles: [
-        { r: 0, c: 1, base: 'E', struct: '' },
-        { r: 1, c: 0, base: 'E', struct: '' },
-        { r: 1, c: 1, base: 'E', struct: '' },
-        { r: 1, c: 2, base: 'E', struct: '' },
-        { r: 2, c: 1, base: 'E', struct: '' },
-      ],
-      coins: 76,
-      energy: 4,
-      builds: ['carrot'],
-      allowedStructures: ['sprinkler', 'scarecrow'],
-      objective: { kind: 'harvest', crop: 'carrot', count: 4 },
-      maxNights: 2,
       allowFeed: false,
     },
   },
@@ -533,7 +495,6 @@ if (sweepMode) {
     r.minNights !== null
       ? `${r.minNights}n`
       : `inf(best ${r.maxProgByNight[r.maxProgByNight.length - 1]})`;
-  // strictly better = fewer nights, or feasible vs infeasible, or (both infeasible) more progress.
   const beats = (a, b) => {
     if (a.minNights !== null && b.minNights !== null) return a.minNights < b.minNights;
     if (a.minNights !== null) return true;
@@ -589,14 +550,6 @@ if (sweepMode) {
         : 'does NOT achieve the criterion'
     }`,
   );
-  if (!shipped.ok) {
-    const alt = verdicts.find((v) => v.ok);
-    console.log(
-      alt
-        ? `smallest working change: regrow=${alt.regrow} reyield=${alt.reyield}`
-        : 'no swept config achieves the criterion — widen the sweep or adjust the scenario.',
-    );
-  }
 }
 
 console.log(

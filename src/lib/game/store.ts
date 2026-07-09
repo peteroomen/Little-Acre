@@ -17,7 +17,7 @@ import {
   type PuzzleDef,
   type PuzzleState,
 } from './puzzles';
-import { actionsFor, type ActionCtx, type TileAction } from './actions';
+import { actionsFor, uprootNeedsConfirm, type ActionCtx, type TileAction } from './actions';
 import {
   CROPS,
   LAND,
@@ -54,6 +54,8 @@ export type StoreTab = 'shop' | 'boost' | 'guide';
 export const NIGHT_GROW_MS = 1500;
 export const NIGHT_WAKE_MS = 3400;
 const TOAST_MS = 1900;
+/** How long a mournable-uproot confirm stays armed after the first tap. */
+const UPROOT_ARM_MS = 3000;
 
 export type ToastKind = 'ok' | 'bad';
 export interface Toast {
@@ -142,6 +144,8 @@ export interface GameState {
   } | null;
   /** Highlighted ring slice (-1 = centre / primary). */
   radialHi: number;
+  /** Tile with a mournable-uproot confirm armed (tap Uproot again to commit); null = none. */
+  uprootArm: { r: number; c: number } | null;
   storeOpen: boolean;
   storeTab: StoreTab;
   toasts: Toast[];
@@ -221,7 +225,9 @@ export const useGameStore = create<GameState>((set, get) => {
   const commitPuzzle = (def: PuzzleDef, run: PuzzleRun, next: PuzzleState) => {
     const patch: PuzzleRun = { ...run, ...next };
     if (next.status === 'won') {
-      const stars = starsFor(def, next.nightsUsed);
+      // Goal-tier stars read the PROGRESS reached, not nights: an instant 3★ (cleared the top
+      // target mid-run) and a deadline win (scored at the night limit) both funnel through here.
+      const stars = starsFor(def, next.progress);
       patch.stars = stars;
       const prev = get().puzzleStars[run.id] ?? 0;
       if (stars > prev) {
@@ -280,6 +286,46 @@ export const useGameStore = create<GameState>((set, get) => {
       return false;
     }
     return true;
+  };
+
+  /**
+   * Uproot confirm guard (mirrors the Sleep guard): the FIRST attempt to uproot a mournable crop
+   * (see uprootNeedsConfirm) arms a tap-again window and toasts instead of pulling it; a second
+   * uproot on the same tile within the window commits. Any other executed action disarms it, and
+   * the arm auto-clears after UPROOT_ARM_MS. State lives here (store UI), never inside execAction.
+   */
+  let uprootTimer: number | null = null;
+  const armUproot = (r: number, c: number) => {
+    set({ uprootArm: { r, c } });
+    if (uprootTimer) window.clearTimeout(uprootTimer);
+    uprootTimer = window.setTimeout(() => {
+      if (get().uprootArm) set({ uprootArm: null });
+    }, UPROOT_ARM_MS);
+  };
+  const disarmUproot = () => {
+    if (uprootTimer) {
+      window.clearTimeout(uprootTimer);
+      uprootTimer = null;
+    }
+    if (get().uprootArm) set({ uprootArm: null });
+  };
+
+  /**
+   * Run a chosen action, intercepting a mournable uproot with the tap-again confirm. Returns a
+   * nudge (no execution) while the confirm is armed; otherwise disarms and executes. The single
+   * gate behind both a bare tap and a radial commit.
+   */
+  const guardOrExec = (t: Tile, a: TileAction): ActionResult => {
+    if (a.kind === 'uproot' && uprootNeedsConfirm(t)) {
+      const arm = get().uprootArm;
+      if (!arm || arm.r !== t.r || arm.c !== t.c) {
+        armUproot(t.r, t.c);
+        get().toast(`Really pull the ${CROPS[t.crop!].name}? Tap again`, 'bad');
+        return { fx: 'nudge', r: t.r, c: t.c };
+      }
+    }
+    disarmUproot();
+    return execAction(t, a);
   };
 
   /**
@@ -441,6 +487,7 @@ export const useGameStore = create<GameState>((set, get) => {
     night: { title: '', sub: '' },
     radial: null,
     radialHi: -1,
+    uprootArm: null,
     storeOpen: false,
     storeTab: 'shop',
     toasts: [],
@@ -475,6 +522,7 @@ export const useGameStore = create<GameState>((set, get) => {
         night: { title: '', sub: '' },
         radial: null,
         radialHi: -1,
+        uprootArm: null,
         storeOpen: false,
       });
     },
@@ -498,6 +546,7 @@ export const useGameStore = create<GameState>((set, get) => {
         night: { title: '', sub: '' },
         radial: null,
         radialHi: -1,
+        uprootArm: null,
         storeOpen: false,
       });
     },
@@ -533,7 +582,7 @@ export const useGameStore = create<GameState>((set, get) => {
           else if (t.kind === 'rock') get().toast('This rock is spent — it will recover', 'bad');
           return { fx: 'nudge', r, c };
         }
-        const res = execAction(t, acts.primary);
+        const res = guardOrExec(t, acts.primary);
         get().save();
         return res;
       }
@@ -552,7 +601,7 @@ export const useGameStore = create<GameState>((set, get) => {
       if (!a) return NONE;
       const t = get().board[tileIndex(radial.r, radial.c)];
       if (!t) return NONE;
-      const res = execAction(t, a);
+      const res = guardOrExec(t, a);
       get().save();
       return res;
     },
@@ -580,11 +629,12 @@ export const useGameStore = create<GameState>((set, get) => {
             sub: parts.length ? parts.join(' · ') : 'A quiet night on the farm',
           },
         }));
-        // Puzzle mode: count the night and resolve a loss if the limit is exceeded.
+        // Puzzle mode: count the night and, at the deadline, score the run on progress (a 1★/2★
+        // deadline win must persist its stars, so route through commitPuzzle, not a bare set).
         const run = get().puzzle;
         if (get().mode === 'puzzle' && run) {
           const def = getPuzzle(run.id);
-          if (def) set({ puzzle: { ...run, ...registerNight(def, run) } });
+          if (def) commitPuzzle(def, run, registerNight(def, run));
         }
         get().save();
       }, NIGHT_GROW_MS);

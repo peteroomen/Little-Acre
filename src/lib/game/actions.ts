@@ -170,6 +170,16 @@ function harvestAction(crop: CropId): TileAction {
 }
 
 /**
+ * True when uprooting `t` destroys something the player would mourn — a growing crop past its
+ * first sprout (stage > 0) or a re-yield vine that has already borne fruit (harvests > 0). The
+ * store arms a tap-again confirm for these (mirrors the Sleep guard). A fresh stage-0 planting
+ * (nothing invested overnight yet) and a wilted clear stay instant. Pure — tested in Vitest.
+ */
+export function uprootNeedsConfirm(t: Tile): boolean {
+  return t.kind === 'tilled' && !!t.crop && !t.wilted && (t.stage > 0 || (t.harvests ?? 0) > 0);
+}
+
+/**
  * The actions a tap on `t` offers, given the run context. `primary` is the fast default
  * (radial centre / quick-tap); `ring` holds the secondary choices. When `ring` is empty the
  * store runs `primary` on a bare tap; otherwise it opens the press-hold radial.
