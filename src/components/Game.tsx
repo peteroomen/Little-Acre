@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { radialHiFor } from '@/lib/game/actions';
 import { startLoop } from '@/lib/game/loop';
 import { useGameStore, type ActionResult } from '@/lib/game/store';
+import { boardSize } from '@/lib/game/tiles';
 import { BoardRenderer } from '@/lib/renderer/board-renderer';
 
 import { Hotbar } from './ui/Hotbar';
@@ -33,12 +34,13 @@ export function Game() {
       const st = useGameStore.getState();
       const radial = st.radial;
       if (!radial) return null;
-      const tile = st.board[radial.r * 3 + radial.c];
+      const tile = st.board.find((t) => t.r === radial.r && t.c === radial.c);
       const hiAction = st.radialHi < 0 ? radial.primary : radial.ring[st.radialHi];
       const isSprinkler =
         tile?.structure === 'sprinkler' ||
         (!!hiAction && hiAction.kind === 'structure' && hiAction.build === 'sprinkler');
       if (!isSprinkler) return null;
+      const n = boardSize(st.board);
       const { r, c } = radial;
       const cells = [{ r, c }];
       for (const [dr, dc] of [
@@ -49,7 +51,7 @@ export function Game() {
       ] as const) {
         const nr = r + dr;
         const nc = c + dc;
-        if (nr >= 0 && nr < 3 && nc >= 0 && nc < 3) cells.push({ r: nr, c: nc });
+        if (nr >= 0 && nr < n && nc >= 0 && nc < n) cells.push({ r: nr, c: nc });
       }
       return cells;
     };

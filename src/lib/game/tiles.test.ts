@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BOARD_TIERS,
   CROPS,
   FISH_COINS,
   ORE_COINS,
+  boardSize,
   createBoard,
+  createFreeplayBoard,
   cropGrow,
+  expandBoard,
   harvestPatch,
   harvestValue,
   isAutoWatered,
@@ -294,5 +298,73 @@ describe('createBoard gathering stock', () => {
     const at = (r: number, c: number) => board[r * 3 + c];
     expect(at(2, 0)).toMatchObject({ kind: 'pond', pondStock: 4 });
     expect(at(0, 0)).toMatchObject({ kind: 'rock', rockCharges: 3, rockDormant: 0 });
+  });
+});
+
+describe('board tiers + boardSize', () => {
+  it('ships the 1×1 → 3×3 → 5×5 ladder with a free tier 0', () => {
+    expect(BOARD_TIERS.map((t) => t.size)).toEqual([1, 3, 5]);
+    expect(BOARD_TIERS[0].cost).toBe(0);
+  });
+
+  it('derives the side length from a board (max r/c + 1)', () => {
+    expect(boardSize([])).toBe(0);
+    expect(boardSize(createFreeplayBoard(0))).toBe(1);
+    expect(boardSize(createFreeplayBoard(1))).toBe(3);
+    expect(boardSize(createFreeplayBoard(2))).toBe(5);
+  });
+});
+
+describe('createFreeplayBoard', () => {
+  it('tier 0 is a single wild-grass tile', () => {
+    const board = createFreeplayBoard(0);
+    expect(board).toHaveLength(1);
+    expect(board[0]).toMatchObject({ r: 0, c: 0, kind: 'grass', crop: null, structure: null });
+  });
+
+  it('makes an N×N all-grass square with coherent r/c indices', () => {
+    const board = createFreeplayBoard(1);
+    expect(board).toHaveLength(9);
+    expect(board.every((t) => t.kind === 'grass')).toBe(true);
+    expect(board.map((t) => `${t.r}-${t.c}`)).toContain('2-2');
+  });
+});
+
+describe('expandBoard', () => {
+  it('centres a 1×1 tile as the middle of a 3×3, preserving its state', () => {
+    const one = createFreeplayBoard(0);
+    one[0] = { ...one[0], kind: 'tilled', crop: 'carrot', stage: 1, watered: true };
+    const grown = expandBoard(one, 3);
+    expect(grown).toHaveLength(9);
+    const centre = grown.find((t) => t.r === 1 && t.c === 1)!;
+    expect(centre).toMatchObject({ kind: 'tilled', crop: 'carrot', stage: 1, watered: true });
+    // the 8 new tiles are wild grass
+    expect(grown.filter((t) => t.kind === 'grass')).toHaveLength(8);
+  });
+
+  it('centres a 3×3 as the middle of a 5×5 with an offset of 1', () => {
+    const three = createFreeplayBoard(1);
+    // tag the old corner so we can find where it lands
+    three[0] = { ...three[0], kind: 'pond', pondStock: 2 };
+    const grown = expandBoard(three, 5);
+    expect(grown).toHaveLength(25);
+    // old (0,0) → (1,1); old (2,2) → (3,3)
+    expect(grown.find((t) => t.r === 1 && t.c === 1)).toMatchObject({ kind: 'pond', pondStock: 2 });
+    expect(boardSize(grown)).toBe(5);
+    // perimeter ring is all fresh grass (25 − 9 preserved = 16 new grass, plus old grass tiles)
+    expect(grown.filter((t) => t.kind === 'grass').length).toBeGreaterThanOrEqual(16);
+  });
+
+  it('is an idempotence guard: a non-growing request returns the input unchanged', () => {
+    const three = createFreeplayBoard(1);
+    expect(expandBoard(three, 3)).toBe(three);
+    expect(expandBoard(three, 1)).toBe(three);
+  });
+
+  it('does not mutate the input board', () => {
+    const one = createFreeplayBoard(0);
+    const snapshot = JSON.stringify(one);
+    expandBoard(one, 3);
+    expect(JSON.stringify(one)).toBe(snapshot);
   });
 });

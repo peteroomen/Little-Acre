@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseSave, SAVE_VERSION, type SaveState } from './save';
-import { createBoard } from './tiles';
+import { createBoard, createFreeplayBoard } from './tiles';
 
 function fullSave(): SaveState {
   return {
@@ -12,6 +12,7 @@ function fullSave(): SaveState {
     energy: 3,
     maxEnergy: 16,
     bloom: 2.2,
+    boardTier: 1,
     board: createBoard(),
     upgrades: { energy: 2, fertilizer: 1 },
     seen: { carrot: 1 },
@@ -23,6 +24,13 @@ describe('parseSave', () => {
   it('round-trips a well-formed save', () => {
     const s = fullSave();
     expect(parseSave(JSON.parse(JSON.stringify(s)))).toEqual(s);
+  });
+
+  it('round-trips a variable-size board + tier (1×1 and 5×5)', () => {
+    for (const tier of [0, 2]) {
+      const s = { ...fullSave(), boardTier: tier, board: createFreeplayBoard(tier) };
+      expect(parseSave(JSON.parse(JSON.stringify(s)))).toEqual(s);
+    }
   });
 
   it('rejects non-object payloads', () => {
@@ -40,13 +48,21 @@ describe('parseSave', () => {
     expect(parsed!.maxEnergy).toBe(16);
     expect(parsed!.bloom).toBe(1.4);
     expect(parsed!.board).toHaveLength(9);
+    expect(parsed!.boardTier).toBe(1); // no boardTier field ⇒ migrate to the 3×3 tier
     expect(parsed!.upgrades).toEqual({ energy: 0, fertilizer: 0 });
     expect(parsed!.version).toBe(SAVE_VERSION);
   });
 
-  it('replaces a malformed board with a fresh one', () => {
-    const parsed = parseSave({ board: [{ bogus: true }] });
-    expect(parsed!.board).toEqual(createBoard());
+  it('migrates a pre-v5 save (no boardTier, 9-tile board) to the 3×3 tier, board kept verbatim', () => {
+    const board = createBoard();
+    const parsed = parseSave({ coins: 100, board }); // v4-shaped: no boardTier
+    expect(parsed!.boardTier).toBe(1);
+    expect(parsed!.board).toEqual(board);
+  });
+
+  it('replaces a non-array / empty board with a fresh tier-sized one', () => {
+    expect(parseSave({ board: 'nope' })!.board).toEqual(createFreeplayBoard(1));
+    expect(parseSave({ board: [] })!.board).toEqual(createFreeplayBoard(1));
   });
 
   it('ignores NaN / non-finite numbers', () => {

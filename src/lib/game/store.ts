@@ -25,7 +25,9 @@ import {
   FISH_COINS,
   ORE_COINS,
   ROCK_DORMANT_NIGHTS,
-  createBoard,
+  BOARD_TIERS,
+  createFreeplayBoard,
+  expandBoard,
   cropGrow,
   harvestPatch,
   harvestValue,
@@ -125,6 +127,8 @@ export interface GameState {
   energy: number;
   maxEnergy: number;
   bloom: number;
+  /** Owned Freeplay board size, an index into BOARD_TIERS (0 = 1×1 · 1 = 3×3 · 2 = 5×5). */
+  boardTier: number;
   board: Tile[];
   upgrades: UpgradeLevels;
 
@@ -165,6 +169,7 @@ export interface GameState {
   closeRadial: () => void;
   sleep: () => void;
   buyUpgrade: (id: UpgradeId) => void;
+  buyExpansion: () => void;
   rebloom: () => void;
   openStore: () => void;
   closeStore: () => void;
@@ -175,8 +180,9 @@ export interface GameState {
 
 let toastId = 0;
 
-function tileIndex(r: number, c: number): number {
-  return r * 3 + c;
+/** Locate a tile by its (r,c) — board is variable-size in Freeplay, so we can't index by r*3+c. */
+function findTile(board: Tile[], r: number, c: number): Tile | undefined {
+  return board.find((t) => t.r === r && t.c === c);
 }
 
 /** Default Freeplay run state (used for the initial store + a first-time Freeplay start). */
@@ -188,7 +194,9 @@ function freshFreeplay() {
     energy: 16,
     maxEnergy: 16,
     bloom: 1.4,
-    board: createBoard(),
+    // New farms start at tier 0 — a single wild-grass tile. Land/structures are bought from there.
+    boardTier: 0,
+    board: createFreeplayBoard(0),
     upgrades: { ...ZERO_UPGRADES },
   };
 }
@@ -521,7 +529,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
     beginTap: (r, c, cx, cy) => {
       if (get().phase !== 'day') return NONE;
-      const t = get().board[tileIndex(r, c)];
+      const t = findTile(get().board, r, c);
       if (!t) return NONE;
       const acts = actionsFor(t, ctxFromState());
       // No secondary choices ⇒ run the lone default straight away; else open the radial.
@@ -550,7 +558,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const a = hi < 0 ? radial.primary : radial.ring[hi];
       set({ radial: null, radialHi: -1 });
       if (!a) return NONE;
-      const t = get().board[tileIndex(radial.r, radial.c)];
+      const t = findTile(get().board, radial.r, radial.c);
       if (!t) return NONE;
       const res = execAction(t, a);
       get().save();
@@ -623,16 +631,36 @@ export const useGameStore = create<GameState>((set, get) => {
       get().save();
     },
 
+    buyExpansion: () => {
+      const { boardTier, coins, board } = get();
+      const nextTier = boardTier + 1;
+      const tier = BOARD_TIERS[nextTier];
+      if (!tier) {
+        get().toast('The farm is already at full size', 'bad');
+        return;
+      }
+      if (coins < tier.cost) {
+        get().toast('Not enough coins', 'bad');
+        return;
+      }
+      // Grow the board, re-centring the existing farm — every planted/built tile is preserved.
+      const nextBoard = expandBoard(board, tier.size);
+      set((s) => ({ coins: s.coins - tier.cost, boardTier: nextTier, board: nextBoard }));
+      get().toast(`Farm expanded to ${tier.size}×${tier.size}!`, 'ok');
+      get().save();
+    },
+
     rebloom: () => {
       // First-pass prestige: reset the farm, keep a compounding Bloom + a gem dividend.
-      // Economy still being modelled — see docs/design/GDD.md.
+      // Economy still being modelled — see docs/design/GDD.md. The owned board tier is kept
+      // (a fresh grass board at the current size), not reset to 1×1.
       set((s) => ({
         coins: 220,
         gems: s.gems + 8,
         day: 1,
         energy: s.maxEnergy,
         bloom: Math.round(s.bloom * 1.6 * 10) / 10,
-        board: createBoard(),
+        board: createFreeplayBoard(s.boardTier),
         storeOpen: false,
       }));
       get().toast('Rebloomed! Harvest multiplier up', 'ok');
@@ -663,6 +691,7 @@ export const useGameStore = create<GameState>((set, get) => {
         energy: s.energy,
         maxEnergy: s.maxEnergy,
         bloom: s.bloom,
+        boardTier: s.boardTier,
         board: s.board,
         upgrades: s.upgrades,
         seen: s.seen,
@@ -682,6 +711,7 @@ function applySave(set: (partial: Partial<GameState>) => void, save: SaveState):
     energy: Math.min(save.energy, maxEnergy),
     maxEnergy,
     bloom: save.bloom,
+    boardTier: save.boardTier,
     board: save.board,
     upgrades: save.upgrades,
     seen: save.seen,

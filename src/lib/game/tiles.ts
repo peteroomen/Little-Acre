@@ -141,13 +141,102 @@ export const ROCK_DORMANT_NIGHTS = 3;
 export const FISH_COINS = 18;
 export const ORE_COINS = 13;
 
+/**
+ * Puzzle boards are a fixed 3×3 grid (see puzzles.ts / the solver). Freeplay is now
+ * variable-size (see BOARD_TIERS) and derives its dimensions from the actual tiles via
+ * `boardSize`, so these constants exist only for the puzzle path + the legacy `createBoard`.
+ */
 export const BOARD_ROWS = 3;
 export const BOARD_COLS = 3;
 
+export interface BoardTier {
+  /** Side length of the N×N square at this tier. */
+  size: number;
+  /** Coin cost to expand INTO this tier from the previous one (tier 0 is free — the start). */
+  cost: number;
+}
+
 /**
- * The deterministic starting board (mirrors the prototype's `setupTiles` layout).
- * A pure factory so a fresh farm always reproduces the same opening plots and the
- * night/harvest tests have a fixed fixture.
+ * Freeplay board-size ladder: a new farm starts at tier 0 (1×1 wild grass) and grows by
+ * spending coins in the Store. Expansion keeps every existing tile and re-centres the old
+ * square in the new one (see `expandBoard`).
+ *
+ * NOTE: the costs are PLACEHOLDERS pending the owner balance pass — sized to be reachable
+ * after a few carrot harvests (3×3) and a solid early run (5×5), not tuned.
+ */
+export const BOARD_TIERS: BoardTier[] = [
+  { size: 1, cost: 0 },
+  { size: 3, cost: 150 },
+  { size: 5, cost: 600 },
+];
+
+/** The tier index whose board is 3×3 — the shape every pre-v5 (9-tile) save migrates to. */
+export const LEGACY_BOARD_TIER = BOARD_TIERS.findIndex((t) => t.size === 3);
+
+/** Side length N of a square board, derived from its tiles (max r/c + 1). 0 for an empty board. */
+export function boardSize(tiles: Tile[]): number {
+  let max = -1;
+  for (const t of tiles) {
+    if (t.r > max) max = t.r;
+    if (t.c > max) max = t.c;
+  }
+  return max + 1;
+}
+
+/** A fresh, empty wild-grass tile at (r,c). */
+function grassTile(r: number, c: number): Tile {
+  return {
+    r,
+    c,
+    kind: 'grass',
+    crop: null,
+    stage: 0,
+    harvests: 0,
+    watered: false,
+    wilted: false,
+    structure: null,
+  };
+}
+
+/**
+ * A fresh Freeplay board for `tier`: an N×N square of wild grass (N = BOARD_TIERS[tier].size).
+ * Tier 0 is a single wild tile — the player tills, plants, and buys land/structures from there
+ * (the old fixed 3×3 opening layout with a pond/rock is gone for new games; see createBoard).
+ */
+export function createFreeplayBoard(tier: number): Tile[] {
+  const size = BOARD_TIERS[tier]?.size ?? BOARD_TIERS[0].size;
+  const tiles: Tile[] = [];
+  for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) tiles.push(grassTile(r, c));
+  return tiles;
+}
+
+/**
+ * Grow a board to `newSize`, preserving every existing tile's state and CENTRING the old square
+ * in the new one — a 1×1 tile becomes the centre of 3×3, and a 3×3 becomes the centre of 5×5.
+ * New perimeter tiles are wild grass. Pure (returns a fresh board). Idempotence guard: a request
+ * that isn't strictly larger returns the input unchanged, so a double-buy can't shrink or reflow.
+ */
+export function expandBoard(tiles: Tile[], newSize: number): Tile[] {
+  const oldSize = boardSize(tiles);
+  if (newSize <= oldSize) return tiles;
+  // Odd tier sizes (1,3,5) keep the offset integral so the old square lands dead-centre.
+  const offset = Math.floor((newSize - oldSize) / 2);
+  const kept = new Map<string, Tile>();
+  for (const t of tiles) {
+    const nr = t.r + offset;
+    const nc = t.c + offset;
+    kept.set(`${nr}-${nc}`, { ...t, r: nr, c: nc });
+  }
+  const out: Tile[] = [];
+  for (let r = 0; r < newSize; r++)
+    for (let c = 0; c < newSize; c++) out.push(kept.get(`${r}-${c}`) ?? grassTile(r, c));
+  return out;
+}
+
+/**
+ * The deterministic legacy 3×3 board (mirrors the prototype's `setupTiles` layout). New Freeplay
+ * games no longer use it — it's retained as the migration/fallback shape for pre-v5 saves and as a
+ * rich fixture (pond/rock/pre-grown crops) for the save + tile tests.
  */
 export function createBoard(): Tile[] {
   const layout: string[][] = [
