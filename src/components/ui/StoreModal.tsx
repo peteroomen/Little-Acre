@@ -1,6 +1,7 @@
 'use client';
 
 import { useGameStore, type StoreTab } from '@/lib/game/store';
+import { BOARD_TIERS } from '@/lib/game/tiles';
 import { isMaxed, UPGRADE_DEFS, UPGRADE_IDS, upgradeCost } from '@/lib/game/upgrades';
 
 // The Boost tab is a real economy (see below). The Shop tab stays presentational — its
@@ -111,6 +112,8 @@ export function StoreModal() {
   const coins = useGameStore((s) => s.coins);
   const upgrades = useGameStore((s) => s.upgrades);
   const buyUpgrade = useGameStore((s) => s.buyUpgrade);
+  const boardTier = useGameStore((s) => s.boardTier);
+  const buyExpansion = useGameStore((s) => s.buyExpansion);
   const closeStore = useGameStore((s) => s.closeStore);
   const setStoreTab = useGameStore((s) => s.setStoreTab);
   const rebloom = useGameStore((s) => s.rebloom);
@@ -181,6 +184,7 @@ export function StoreModal() {
 
         {tab === 'boost' && (
           <div className="flex flex-col gap-2.5 px-4 pb-3.5 pt-1">
+            <ExpansionCard boardTier={boardTier} coins={coins} onBuy={buyExpansion} />
             {UPGRADE_IDS.map((id) => {
               const def = UPGRADE_DEFS[id];
               const level = upgrades[id];
@@ -277,6 +281,49 @@ export function StoreModal() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Freeplay board expansion (1×1 → 3×3 → 5×5). Minimal functional card matching the Boost cards;
+ * a design agent restyles the Store into a dedicated Expand tab next wave.
+ */
+function ExpansionCard({
+  boardTier,
+  coins,
+  onBuy,
+}: {
+  boardTier: number;
+  coins: number;
+  onBuy: () => void;
+}) {
+  const current = BOARD_TIERS[boardTier];
+  const next = BOARD_TIERS[boardTier + 1];
+  const maxed = !next;
+  const afford = !!next && coins >= next.cost;
+  return (
+    <div className="la-notch flex items-center gap-3 bg-[#eaf6e0] px-3.5 py-3 shadow-[inset_0_0_0_3px_#cbe6b4]">
+      <span className="la-notch h-10 w-10 flex-none bg-[var(--la-leaf)] shadow-[inset_0_0_0_3px_#bfe89b]" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[15px] font-semibold text-[#3f6b2f]">Expand Farm</span>
+          <span className="font-pixel text-xs text-[#4c7a34] bg-[#d6efc4] px-1.5 py-px">
+            {current.size}×{current.size}
+          </span>
+        </div>
+        <div className="mt-0.5 text-xs text-[#5f7a4c]">
+          {maxed
+            ? 'Your farm is at its full size.'
+            : `Grow to ${next.size}×${next.size} — your farm re-centres and every tile is kept.`}
+        </div>
+      </div>
+      <PriceButton
+        price={maxed ? 'MAX' : String(next.cost)}
+        hideCoin={maxed}
+        disabled={maxed || !afford}
+        onClick={onBuy}
+      />
     </div>
   );
 }

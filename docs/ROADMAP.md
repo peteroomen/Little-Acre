@@ -46,6 +46,29 @@ sleep → sunrise lands as a warm little beat.
 
 ---
 
+## Design Drop — UI mockups (2026-07-09) 🟡
+
+**Reference:** `docs/design/mockups/` — `Little Acre - UI Mockups.dc.html` (surfaces 1a–1h) +
+`Little Acre.dc.html` (interactive: farm screen, radial, store, sunrise report). These are the
+visual system of record; align surfaces slice by slice.
+
+- 🟡 **1a Main menu + 1b Puzzle select restyle** *(sliced 2026-07-09 — see
+  `docs/work/2026-07-09-design-alignment.md`)*
+- 🟡 **1c in-puzzle chrome + 1d banner variants + 1e result modal restyle** *(same slice)*
+- ⬜ Farm-screen HUD restyle (coin/gem chips, energy bar, Sleep button per interactive mockup)
+- ⬜ Radial menu restyle (slice anatomy, cost chips, disabled states per interactive mockup)
+- ⬜ Store modal restyle + presentational **Craft** tab (recipe cards, ingredient chips, locked
+     recipe silhouette — machines land with the processing slice)
+- ⬜ **Sunrise Report** card (new surface: grew/wilted/restocked summary at dawn)
+- ⬜ Main-menu live farm-board backdrop (mockup uses an animated board behind the title)
+- ⬜ 1f **Fishing bobber overlay** (needs the timing-minigame mechanic — pair with gameplay)
+- ⬜ 1g **Mining crit-bar overlay** (same — pair with gameplay)
+- ⬜ 1h Visual-system completion (full token adoption in `globals.css`, shared notched-panel /
+     chip / pixel-star components extracted rather than per-file styles)
+- ⬜ Landscape reflow of the restyled surfaces (see M1 both-orientation item)
+
+---
+
 ## M2 — Economy & Content ⬜
 
 **Goal:** Turn the presentational Store into a real progression spine.

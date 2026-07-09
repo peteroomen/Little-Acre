@@ -8,6 +8,7 @@
  */
 
 import {
+  COVERAGE,
   CROP,
   FLOWER,
   FURROW,
@@ -22,7 +23,14 @@ import {
   TILE_SIDE,
   TILE_TOP,
 } from './palette';
-import { isRipe, visualStage, type CropId, type StructId, type Tile } from '../game/tiles';
+import {
+  boardSize,
+  isRipe,
+  visualStage,
+  type CropId,
+  type StructId,
+  type Tile,
+} from '../game/tiles';
 
 export interface BoardSnapshot {
   board: Tile[];
@@ -68,6 +76,8 @@ export class BoardRenderer {
 
   private cssW = 0;
   private cssH = 0;
+  /** Side length N of the board being drawn (1 / 3 / 5 in Freeplay; always 3 for puzzles). */
+  private n = 1;
   private sc = 1;
   private tileW = 158;
   private tileH = 80;
@@ -87,12 +97,18 @@ export class BoardRenderer {
   private lt = 0;
   private raf = 0;
   private ro: ResizeObserver | null = null;
+  /** Sprinkler coverage-preview cells (plus-shape), or null when nothing is being placed. */
+  private coverageHint: { r: number; c: number }[] | null = null;
+  private reducedMotion = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('2D canvas context unavailable');
     this.ctx = ctx;
+    this.reducedMotion =
+      typeof window !== 'undefined' &&
+      !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     for (let i = 0; i < 16; i++) {
       this.amb.push({
         x: Math.random(),
@@ -101,7 +117,7 @@ export class BoardRenderer {
         ph: Math.random() * 6.28,
       });
     }
-    this.buildGeometry();
+    this.buildGeometry(1);
     this.resize();
     this.ro = new ResizeObserver(() => this.resize());
     if (canvas.parentElement) this.ro.observe(canvas.parentElement);
@@ -109,6 +125,23 @@ export class BoardRenderer {
 
   setSnapshot(s: BoardSnapshot): void {
     this.snapshot = s;
+    // Freeplay boards are variable-size (1/3/5); rebuild geometry + re-layout when the size
+    // changes (expansion, or crossing between Freeplay and a 3×3 puzzle).
+    const n = Math.max(1, boardSize(s.board));
+    if (n !== this.n) {
+      this.buildGeometry(n);
+      this.layout();
+    }
+  }
+
+  /**
+   * Show (or replace) the sprinkler coverage-preview cells — the pressed tile plus its watered
+   * orthogonal neighbours — while the radial highlights a Sprinkler placement or rests on an
+   * existing one. Pass null to clear. Driven imperatively from Game.tsx's radial subscription so
+   * no per-frame state crosses React.
+   */
+  setCoverageHint(cells: { r: number; c: number }[] | null): void {
+    this.coverageHint = cells && cells.length ? cells : null;
   }
 
   start(): void {
@@ -134,15 +167,22 @@ export class BoardRenderer {
     return `${r}-${c}`;
   }
 
-  /** Deterministic per-tile speckle + crop-spot layout (seeded, prototype-faithful). */
-  private buildGeometry(): void {
+  /**
+   * Deterministic per-tile speckle + crop-spot layout (seeded, prototype-faithful), rebuilt for an
+   * N×N board. The seed is reset each call, so a given board size reproduces the same farm every
+   * load; different sizes get their own (still deterministic) layout.
+   */
+  private buildGeometry(n: number): void {
+    this.n = n;
+    this.geom.clear();
+    this.anims.clear();
     let s = 1337;
     const rnd = () => {
       s = (s * 1103515245 + 12345) & 0x7fffffff;
       return s / 0x7fffffff;
     };
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
         const spk: [number, number, number][] = [];
         for (let i = 0; i < 22; i++) spk.push([rnd(), rnd(), rnd()]);
         const spots: [number, number, number][] = [];
@@ -166,8 +206,25 @@ export class BoardRenderer {
     this.canvas.style.height = `${this.cssH}px`;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.ctx.imageSmoothingEnabled = false;
+    this.layout();
+  }
 
-    const sc = Math.max(0.6, Math.min(1.1, this.cssW / 900));
+  /**
+   * Scale for an N×N board. `widthFit` keeps the board ~53% of the canvas width at every size
+   * (this reproduces the old 3×3 look — cssW/900 at n=3 — and never overflows horizontally);
+   * `heightFit` guards short viewports. Clamped so a lone 1×1 tile reads cozy (not a speck) and a
+   * full 5×5 still fits.
+   */
+  private scaleFor(n: number): number {
+    const widthFit = this.cssW / (298 * n);
+    const heightFit = (this.cssH * 0.82) / (80 * n + 26);
+    return Math.max(0.3, Math.min(1.3, Math.min(widthFit, heightFit)));
+  }
+
+  /** Position every tile's iso center for the current board size + canvas dimensions. */
+  private layout(): void {
+    const n = this.n;
+    const sc = this.scaleFor(n);
     this.sc = sc;
     this.tileW = 158 * sc;
     this.tileH = 80 * sc;
@@ -177,10 +234,13 @@ export class BoardRenderer {
     this.stepX = this.HW;
     this.stepY = this.QH;
     this.originX = this.cssW / 2;
-    this.originY = this.cssH * 0.5 - 2 * this.stepY;
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        const g = this.geom.get(this.key(r, c))!;
+    // Vertically centre the diamond grid: the middle rank (r+c = n-1) sits at cssH/2, matching the
+    // old 3×3 placement (originY = cssH/2 - 2·stepY at n=3).
+    this.originY = this.cssH * 0.5 - (n - 1) * this.stepY;
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        const g = this.geom.get(this.key(r, c));
+        if (!g) continue;
         g.cx = this.originX + (c - r) * this.stepX;
         g.cy = this.originY + (c + r) * this.stepY;
       }
@@ -190,8 +250,8 @@ export class BoardRenderer {
   /** Hit-test canvas-local (px,py) to a tile, front-to-back. */
   tileAt(px: number, py: number): { r: number; c: number } | null {
     const order: { r: number; c: number; g: Geom }[] = [];
-    for (let r = 0; r < 3; r++)
-      for (let c = 0; c < 3; c++) order.push({ r, c, g: this.geom.get(this.key(r, c))! });
+    for (let r = 0; r < this.n; r++)
+      for (let c = 0; c < this.n; c++) order.push({ r, c, g: this.geom.get(this.key(r, c))! });
     order.sort((a, b) => b.r + b.c - (a.r + a.c));
     for (const { r, c, g } of order) {
       const dcx = px - g.cx;
@@ -355,6 +415,7 @@ export class BoardRenderer {
     this.drawSkirt();
     const order = [...this.snapshot.board].sort((a, b) => a.r + a.c - (b.r + b.c));
     for (const t of order) this.drawTile(t, time);
+    this.drawCoverage(time);
 
     for (let i = this.fx.length - 1; i >= 0; i--) {
       const f = this.fx[i];
@@ -405,13 +466,13 @@ export class BoardRenderer {
   }
 
   /**
-   * The board's 3D depth, drawn once as a single slab skirt for the whole 3×3 grid so there are no
+   * The board's 3D depth, drawn once as a single slab skirt for the whole N×N grid so there are no
    * interior tile-to-tile seams. Two faces (left/right) drop from the front-bottom silhouette edges.
    */
   private drawSkirt(): void {
     const c = this.ctx;
     const { HW, QH, D, originX: O, originY: O2 } = this;
-    const N = 3; // board is a fixed 3×3 grid
+    const N = this.n;
     const bx = O;
     const by = O2 + 2 * N * QH; // front-bottom point
     const rx = O + N * HW;
@@ -436,6 +497,42 @@ export class BoardRenderer {
     c.lineTo(bx, by + D);
     c.closePath();
     c.fill();
+  }
+
+  /**
+   * Soft water-toned plus-shape glow over the sprinkler coverage cells. Drawn above the tile art
+   * (so it reads as a tint on the soil) but below particles. The gentle alpha pulse is frozen flat
+   * under prefers-reduced-motion.
+   */
+  private drawCoverage(time: number): void {
+    if (!this.coverageHint) return;
+    const c = this.ctx;
+    const { HW, QH } = this;
+    const pulse = this.reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(time * 3);
+    const fillA = 0.16 + 0.14 * pulse;
+    c.save();
+    c.lineJoin = 'round';
+    for (const cell of this.coverageHint) {
+      const g = this.geom.get(this.key(cell.r, cell.c));
+      if (!g) continue;
+      const cx = g.cx;
+      const oy = g.cy;
+      c.beginPath();
+      c.moveTo(cx, oy);
+      c.lineTo(cx + HW, oy + QH);
+      c.lineTo(cx, oy + QH * 2);
+      c.lineTo(cx - HW, oy + QH);
+      c.closePath();
+      c.globalAlpha = fillA;
+      c.fillStyle = COVERAGE.fill;
+      c.fill();
+      c.globalAlpha = 0.45 + 0.35 * pulse;
+      c.strokeStyle = COVERAGE.edge;
+      c.lineWidth = 2;
+      c.stroke();
+    }
+    c.globalAlpha = 1;
+    c.restore();
   }
 
   private drawTile(t: Tile, time: number): void {

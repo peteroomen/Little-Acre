@@ -1,4 +1,13 @@
-import { CROPS, createBoard, POND_MAX, ROCK_CHARGES, type CropId, type Tile } from './tiles';
+import {
+  BOARD_TIERS,
+  CROPS,
+  createFreeplayBoard,
+  LEGACY_BOARD_TIER,
+  POND_MAX,
+  ROCK_CHARGES,
+  type CropId,
+  type Tile,
+} from './tiles';
 import { normalizeUpgrades, type UpgradeLevels } from './upgrades';
 
 /**
@@ -12,8 +21,11 @@ import { normalizeUpgrades, type UpgradeLevels } from './upgrades';
  * v3: added `upgrades` (purchasable levels); backfilled to zero for older saves.
  * v4: gathering nodes gained `pondStock` / `rockCharges` / `rockDormant`; `normalizeTile`
  *     backfills them (pond 4, rock 3 charges, 0 dormant) so older saves start stocked.
+ * v5: Freeplay board is variable-size — persist `boardTier` + the variable-length `board`.
+ *     Pre-v5 saves have no `boardTier` and a fixed 9-tile 3×3 board, so they migrate to
+ *     LEGACY_BOARD_TIER (the 3×3 tier) with their board kept verbatim.
  */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 const SAVE_KEY = 'little-acre-v1';
 /** Puzzle best-stars live in their OWN key so an ephemeral puzzle never touches the farm save. */
 const PUZZLE_KEY = 'little-acre-puzzles';
@@ -26,6 +38,8 @@ export interface SaveState {
   energy: number;
   maxEnergy: number;
   bloom: number;
+  /** Index into BOARD_TIERS — the owned Freeplay board size (1×1 / 3×3 / 5×5). */
+  boardTier: number;
   board: Tile[];
   upgrades: UpgradeLevels;
   seen: Record<string, 1>;
@@ -93,10 +107,20 @@ export function savePuzzleStars(puzzleStars: Record<string, number>): void {
 export function parseSave(data: unknown): SaveState | null {
   if (!data || typeof data !== 'object') return null;
   const d = data as Partial<SaveState>;
-  const board =
-    Array.isArray(d.board) && d.board.length === 9
-      ? (d.board as Partial<Tile>[]).map(normalizeTile)
-      : createBoard();
+  // A missing boardTier means a pre-v5 save (always 3×3) → migrate to LEGACY_BOARD_TIER.
+  const boardTier = Math.max(
+    0,
+    Math.min(BOARD_TIERS.length - 1, Math.floor(numOr(d.boardTier, LEGACY_BOARD_TIER))),
+  );
+  // Variable-length board: keep any non-empty array of tile-like objects verbatim (normalised);
+  // otherwise fall back to a fresh grass board sized to the owned tier.
+  const validBoard =
+    Array.isArray(d.board) &&
+    d.board.length > 0 &&
+    d.board.every((t) => t && typeof t === 'object');
+  const board = validBoard
+    ? (d.board as Partial<Tile>[]).map(normalizeTile)
+    : createFreeplayBoard(boardTier);
   return {
     version: SAVE_VERSION,
     coins: numOr(d.coins, 220),
@@ -105,6 +129,7 @@ export function parseSave(data: unknown): SaveState | null {
     energy: numOr(d.energy, 16),
     maxEnergy: numOr(d.maxEnergy, 16),
     bloom: numOr(d.bloom, 1.4),
+    boardTier,
     board,
     upgrades: normalizeUpgrades(d.upgrades),
     seen: d.seen && typeof d.seen === 'object' ? d.seen : {},

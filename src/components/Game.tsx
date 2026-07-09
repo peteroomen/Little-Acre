@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { radialHiFor } from '@/lib/game/actions';
 import { startLoop } from '@/lib/game/loop';
 import { useGameStore, type ActionResult } from '@/lib/game/store';
+import { boardSize } from '@/lib/game/tiles';
 import { BoardRenderer } from '@/lib/renderer/board-renderer';
 
 import { Hotbar } from './ui/Hotbar';
@@ -27,10 +28,39 @@ export function Game() {
     const renderer = new BoardRenderer(canvas);
     rendererRef.current = renderer;
 
+    // Sprinkler coverage preview: the plus-shape (pressed tile + orthogonal neighbours) is shown
+    // while the radial highlights a Sprinkler placement, or rests on a tile that already has one.
+    const coverageCells = (): { r: number; c: number }[] | null => {
+      const st = useGameStore.getState();
+      const radial = st.radial;
+      if (!radial) return null;
+      const tile = st.board.find((t) => t.r === radial.r && t.c === radial.c);
+      const hiAction = st.radialHi < 0 ? radial.primary : radial.ring[st.radialHi];
+      const isSprinkler =
+        tile?.structure === 'sprinkler' ||
+        (!!hiAction && hiAction.kind === 'structure' && hiAction.build === 'sprinkler');
+      if (!isSprinkler) return null;
+      const n = boardSize(st.board);
+      const { r, c } = radial;
+      const cells = [{ r, c }];
+      for (const [dr, dc] of [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1],
+      ] as const) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr >= 0 && nr < n && nc >= 0 && nc < n) cells.push({ r: nr, c: nc });
+      }
+      return cells;
+    };
+
     // App.init() has already loaded the save / set up the active run — just seed the snapshot.
     const pushSnapshot = () => {
       const { board, phase } = useGameStore.getState();
       renderer.setSnapshot({ board, phase, hoverKey: hoverKeyRef.current });
+      renderer.setCoverageHint(coverageCells());
     };
     pushSnapshot();
     renderer.start();

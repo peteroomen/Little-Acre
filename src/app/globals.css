@@ -35,6 +35,71 @@
   --la-text: #6b5236;
   --la-muted: #a08a6c;
   --la-danger: #e07a5f;
+
+  /* ── Design-drop surface tokens (mockup 1a–1e / 1h visual system) ──
+     Warm-parchment sticker system: ink/body/label type, card + gold chip
+     fills, the coloured sticker-button ramps, and puzzle-select accents. */
+  --la-ink: #5a462f; /* darkest heading ink (card titles / menu title) */
+  --la-body: #7a6547; /* body copy on cards */
+  --la-label: #c99a6e; /* uppercase caption / section label */
+  --la-muted-2: #a08862; /* secondary muted (card subtitles) */
+  --la-hint: #b39c78; /* faint footer copy */
+
+  --la-card: #fffaf0; /* inner card fill */
+  --la-card-line: #f0e0c4; /* card inset ring */
+  --la-card-shadow: #e8d5b2; /* card hard drop-shadow */
+  --la-panel-shadow: #dcc39a; /* big panel hard drop-shadow */
+
+  --la-gold-line: #f3d698; /* gold chip inset ring */
+  --la-gold-shadow: #ecc98a; /* gold chip hard drop-shadow */
+  --la-coin-ring: #fce9b0; /* coin pixel inner ring */
+  --la-coin-soft: #fff3d6; /* soft coin chip fill (star total / cost pills) */
+  --la-grow-deep: #7cae4f; /* progress fill deep green + par tag text */
+  --la-orange: #c46d38; /* night numerals / warm accent */
+  --la-star-empty: #e4d7ba; /* hollow star fill */
+
+  --la-leaf-ring: #bfe89b; /* green sticker inset ring */
+  --la-leaf-shadow: #7fb35c; /* green sticker hard drop-shadow */
+  --la-amber: #ffd79b; /* amber sticker fill */
+  --la-amber-text: #7a4a12;
+  --la-amber-ring: #ffe6bd;
+  --la-amber-shadow: #e6ac5e;
+  --la-sleep-text: #fff0b8; /* sleep sticker text */
+  --la-sleep-line: #8574c0; /* sleep sticker inset ring */
+  --la-sleep-shadow: #463880; /* sleep sticker hard drop-shadow */
+  --la-quiet: #fff1dd; /* subdued (Retry/Puzzles/back) fill */
+  --la-quiet-text: #a0895f;
+  --la-modal: #fdf6e7; /* result-modal fill */
+  --la-gem-deep: #6a4bb0; /* deep purple numerals */
+  --la-today-bg: #efe4ff; /* "today only" tag fill */
+  --la-dusk-label: #8a73c0; /* "dusk in" caption on today-only banners */
+  --la-newtag-bg: #cdeab0; /* "New!" tag fill */
+  --la-title-pink: #f2a9c4; /* menu title flanker */
+  --la-title-lilac: #c9a6ff; /* menu title flanker */
+  --la-title-shadow: #ecc98a; /* gold under-shadow on the menu title */
+  --la-settings-text: #b0996f; /* reserved "Settings · soon" ink */
+  --la-settings-line: #e7d6b4; /* reserved "Settings · soon" ring */
+
+  /* last-night amber-danger night badge */
+  --la-night-danger-bg: #fdeee4;
+  --la-night-danger-line: #f2cdb4;
+  --la-night-danger-label: #d07a52;
+
+  /* objective progress meter track */
+  --la-meter-track: #f6e9d2;
+  --la-meter-line: #e8d5b2;
+
+  /* energy meter track (HUD / in-puzzle chrome) */
+  --la-energy-track: #f6e2c6;
+  --la-energy-track-line: #edcb9e;
+
+  /* locked / disabled puzzle card */
+  --la-locked-bg: #f3ecdb;
+  --la-locked-line: #e4d7ba;
+  --la-locked-ink: #a29775;
+  --la-locked-sub: #b3a482;
+  --la-locked-swatch: #c8bda4;
+  --la-locked-glyph: #8a7a5c;
 }
 
 * {
@@ -133,6 +198,153 @@ canvas {
   }
   50% {
     opacity: 1;
+  }
+}
+@keyframes la-star-pop {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Notch step scales with element size (mockup: 3px small chips → 6px modals). */
+.la-notch-3 {
+  clip-path: polygon(
+    0 3px,
+    3px 3px,
+    3px 0,
+    calc(100% - 3px) 0,
+    calc(100% - 3px) 3px,
+    100% 3px,
+    100% calc(100% - 3px),
+    calc(100% - 3px) calc(100% - 3px),
+    calc(100% - 3px) 100%,
+    3px 100%,
+    3px calc(100% - 3px),
+    0 calc(100% - 3px)
+  );
+}
+.la-notch-5 {
+  clip-path: polygon(
+    0 5px,
+    5px 5px,
+    5px 0,
+    calc(100% - 5px) 0,
+    calc(100% - 5px) 5px,
+    100% 5px,
+    100% calc(100% - 5px),
+    calc(100% - 5px) calc(100% - 5px),
+    calc(100% - 5px) 100%,
+    5px 100%,
+    5px calc(100% - 5px),
+    0 calc(100% - 5px)
+  );
+}
+.la-notch-6 {
+  clip-path: polygon(
+    0 6px,
+    6px 6px,
+    6px 0,
+    calc(100% - 6px) 0,
+    calc(100% - 6px) 6px,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 6px) calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    6px calc(100% - 6px),
+    0 calc(100% - 6px)
+  );
+}
+
+/* Pixel star / plus-badge — arms at 31%/69% so one clip scales to any size. */
+.la-star {
+  clip-path: polygon(
+    0 31%,
+    31% 31%,
+    31% 0,
+    69% 0,
+    69% 31%,
+    100% 31%,
+    100% 69%,
+    69% 69%,
+    69% 100%,
+    31% 100%,
+    31% 69%,
+    0 69%
+  );
+}
+
+/* ── Sticker treatments (mockup 1h): inset top-light + bottom-shade ring,
+   then a hard drop-shadow one shade darker that follows the notch. Pair each
+   with a `.la-notch*` class for the pixel corners. ── */
+.la-card-sticker {
+  background: var(--la-card);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.7),
+    inset 0 0 0 3px var(--la-card-line);
+  filter: drop-shadow(0 4px 0 var(--la-card-shadow));
+}
+.la-chip-gold {
+  background: var(--la-panel-soft);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -5px 0 rgba(150, 110, 30, 0.16),
+    inset 0 0 0 3px var(--la-gold-line);
+  filter: drop-shadow(0 4px 0 var(--la-gold-shadow));
+}
+.la-btn-green {
+  background: var(--la-leaf);
+  color: var(--la-leaf-text);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -6px 0 rgba(40, 80, 20, 0.28),
+    inset 0 0 0 3px var(--la-leaf-ring);
+  filter: drop-shadow(0 5px 0 var(--la-leaf-shadow));
+}
+.la-btn-amber {
+  background: var(--la-amber);
+  color: var(--la-amber-text);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -6px 0 rgba(150, 100, 20, 0.26),
+    inset 0 0 0 3px var(--la-amber-ring);
+  filter: drop-shadow(0 5px 0 var(--la-amber-shadow));
+}
+.la-btn-sleep {
+  background: var(--la-sleep);
+  color: var(--la-sleep-text);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -6px 0 rgba(30, 20, 60, 0.42),
+    inset 0 0 0 3px var(--la-sleep-line);
+  filter: drop-shadow(0 5px 0 var(--la-sleep-shadow));
+}
+.la-btn-quiet {
+  background: var(--la-quiet);
+  color: var(--la-quiet-text);
+  box-shadow: inset 0 0 0 3px var(--la-panel-line);
+  filter: drop-shadow(0 3px 0 var(--la-panel-shadow));
+}
+
+/* Result-modal star pop — bounce in; `la-anim` freezes it under reduced-motion. */
+@keyframes la-star-bounce {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 

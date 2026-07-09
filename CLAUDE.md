@@ -267,8 +267,33 @@ Trade-offs — what this makes easier or harder.
 > **Update this section at the end of every session** — what shipped, what's next.
 
 - **Phase:** M0 scaffold shipped; M2 economy underway (crops + upgrades landed); **Modes shipped** —
-  Main Menu + Freeplay + 3 tutorial Puzzles (DESIGN.md §3); **contextual controls shipped** (this session).
-- **This session (2026-07-08): "Hands on the Farm" super-slice** (branch `feature/hands-on-farm`,
+  Main Menu + Freeplay + **8 Puzzles** (3 tutorials + 5 solver-locked challenges); contextual
+  controls shipped; **puzzle megaslice shipped** (this session).
+- **This session (2026-07-09): "Puzzle-Vision Alignment" megaslice** (branch
+  `claude/game-puzzle-potential-bu4nri`, pushed for owner feel-pass — PR after). Orchestrated 4
+  Opus agents (2 waves) + orchestrator integration. **New tooling:** `scripts/puzzle-solver.mjs`
+  (exact optimal-play search over the real rules — same-day feed chains, fruit-holding, uproot,
+  structures/spatial, coins-earned objectives, injectable crop defs) +
+  `scripts/check-puzzle-pars.mjs` (locks every PuzzleDef: par == optimal AND par−1 infeasible;
+  old-rules regression; pinned feature checks; `--sweep-tomato`; ~22s). **Rules:** tomato retuned
+  `reyield 4 / regrow 1` (2⚡/harvest amortized — was strictly dominated by carrot); **sprinklers
+  water a plus-shape** (own + 4 orthogonal; pure `isAutoWatered`, `needsWater(t, tiles)` is now
+  board-aware); **gathering deterministic** (`FISH_COINS 18` / `ORE_COINS 13`, gem on a rock
+  cycle's last pull — no RNG left); `ActionCtx.allowFeed`/`allowStructures` + same flags on
+  `PuzzleDef` (tutorials: feed OFF — fixes the 0-night feed cheese the solver found; vine-and-again
+  stars retuned to {5,6}). **Puzzle engine v2:** objective union `harvest | coins` (coins =
+  cumulative EARNED), `section: 'tutorial' | 'challenge'`, `boardFrom()` rich boards (pre-grown
+  crops/stock/charges), `nightLimit: 0` = "today only". **Five challenges** (all knife-edge):
+  market-day (0 nights, feed chains, 10⚡/20c), the-patient-vine (hold-the-ripe-fruit, par 4),
+  seed-money (bootstrap ladder, par 5), thirsty-work (5⚡ crop mix, par 7 — mixing beats both
+  mono-crops), waterworks (sprinkler placement, par 2). **UI:** select shelves
+  (Tutorials/Challenges), coins + today-only banner variants, Sleep guard in 0-night puzzles
+  (2-tap), result modal staggered star-pop + par line, `BoardRenderer.setCoverageHint()` sprinkler
+  coverage glow (Game wires it from radial state). lint/type-check/build clean, **110 tests**
+  (+33); harness green; Playwright smoke (select + Market Day banner). See
+  `docs/work/2026-07-08-megaslice-puzzle-vision.md`. **Next:** owner feel-pass → PR; coins-objective
+  puzzle; processing chains (P3/P5); update docs/design/puzzles.md; freeplay balance knock-ons.
+- **Prior session (2026-07-08): "Hands on the Farm" super-slice** (branch `feature/hands-on-farm`,
   PR open — do not merge, owner reviews). Replaced Click/Build tool modes with **contextual tap +
   press-hold radial** and wired the full farming verb set. New pure **`src/lib/game/actions.ts`**
   (`actionsFor(tile, ctx) → {primary, ring}` + radial geometry `ringAngle` / `radialHiFor` /

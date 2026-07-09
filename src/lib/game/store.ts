@@ -8,14 +8,26 @@ import {
   SAVE_VERSION,
   type SaveState,
 } from './save';
-import { getPuzzle, registerHarvest, registerNight, starsFor, type PuzzleState } from './puzzles';
+import {
+  getPuzzle,
+  registerEarned,
+  registerHarvest,
+  registerNight,
+  starsFor,
+  type PuzzleDef,
+  type PuzzleState,
+} from './puzzles';
 import { actionsFor, type ActionCtx, type TileAction } from './actions';
 import {
   CROPS,
   LAND,
   STRUCT,
+  FISH_COINS,
+  ORE_COINS,
   ROCK_DORMANT_NIGHTS,
-  createBoard,
+  BOARD_TIERS,
+  createFreeplayBoard,
+  expandBoard,
   cropGrow,
   harvestPatch,
   harvestValue,
@@ -115,6 +127,8 @@ export interface GameState {
   energy: number;
   maxEnergy: number;
   bloom: number;
+  /** Owned Freeplay board size, an index into BOARD_TIERS (0 = 1×1 · 1 = 3×3 · 2 = 5×5). */
+  boardTier: number;
   board: Tile[];
   upgrades: UpgradeLevels;
 
@@ -155,6 +169,7 @@ export interface GameState {
   closeRadial: () => void;
   sleep: () => void;
   buyUpgrade: (id: UpgradeId) => void;
+  buyExpansion: () => void;
   rebloom: () => void;
   openStore: () => void;
   closeStore: () => void;
@@ -165,8 +180,9 @@ export interface GameState {
 
 let toastId = 0;
 
-function tileIndex(r: number, c: number): number {
-  return r * 3 + c;
+/** Locate a tile by its (r,c) — board is variable-size in Freeplay, so we can't index by r*3+c. */
+function findTile(board: Tile[], r: number, c: number): Tile | undefined {
+  return board.find((t) => t.r === r && t.c === c);
 }
 
 /** Default Freeplay run state (used for the initial store + a first-time Freeplay start). */
@@ -178,7 +194,9 @@ function freshFreeplay() {
     energy: 16,
     maxEnergy: 16,
     bloom: 1.4,
-    board: createBoard(),
+    // New farms start at tier 0 — a single wild-grass tile. Land/structures are bought from there.
+    boardTier: 0,
+    board: createFreeplayBoard(0),
     upgrades: { ...ZERO_UPGRADES },
   };
 }
@@ -207,13 +225,8 @@ export const useGameStore = create<GameState>((set, get) => {
     set((s) => ({ seen: { ...s.seen, [key]: 1 } }));
   };
 
-  /** Record a harvest against the active puzzle objective; persist best stars on a win. */
-  const trackPuzzleHarvest = (crop: CropId) => {
-    const run = get().puzzle;
-    if (get().mode !== 'puzzle' || !run) return;
-    const def = getPuzzle(run.id);
-    if (!def) return;
-    const next = registerHarvest(def, run, crop);
+  /** Commit a reduced puzzle state to the active run; persist best stars on a win. */
+  const commitPuzzle = (def: PuzzleDef, run: PuzzleRun, next: PuzzleState) => {
     const patch: PuzzleRun = { ...run, ...next };
     if (next.status === 'won') {
       const stars = starsFor(def, next.nightsUsed);
@@ -228,14 +241,43 @@ export const useGameStore = create<GameState>((set, get) => {
     set({ puzzle: patch });
   };
 
+  /** Record a harvest against the active puzzle objective (no-op for coin objectives). */
+  const trackPuzzleHarvest = (crop: CropId) => {
+    const run = get().puzzle;
+    if (get().mode !== 'puzzle' || !run) return;
+    const def = getPuzzle(run.id);
+    if (!def) return;
+    commitPuzzle(def, run, registerHarvest(def, run, crop));
+  };
+
+  /**
+   * Record coins EARNED (harvest sells + fish/mine income) against a coin objective. Spending
+   * never reduces progress — registerEarned only accumulates (no-op for harvest objectives).
+   */
+  const trackPuzzleEarned = (amount: number) => {
+    const run = get().puzzle;
+    if (get().mode !== 'puzzle' || !run) return;
+    const def = getPuzzle(run.id);
+    if (!def) return;
+    commitPuzzle(def, run, registerEarned(def, run, amount));
+  };
+
   /** The action context for the active run: which crops/structures/land a tile may offer. */
   const ctxFromState = (): ActionCtx => {
     const s = get();
-    const crops =
-      s.mode === 'puzzle' && s.puzzle
-        ? (getPuzzle(s.puzzle.id)?.builds ?? []).filter(isCrop)
-        : (Object.keys(CROPS) as CropId[]);
-    return { crops, allowStructures: s.mode === 'freeplay', allowLand: s.mode === 'freeplay' };
+    const def = s.mode === 'puzzle' && s.puzzle ? getPuzzle(s.puzzle.id) : undefined;
+    const crops = def ? (def.builds ?? []).filter(isCrop) : (Object.keys(CROPS) as CropId[]);
+    // Feed is on in Freeplay; in a puzzle it follows the def (default off, so tutorials hide it).
+    const allowFeed = s.mode === 'freeplay' ? true : (def?.allowFeed ?? false);
+    // Structures follow the def in a puzzle (default off — only spatial puzzles opt in).
+    const allowStructures = s.mode === 'freeplay' ? true : (def?.allowStructures ?? false);
+    return {
+      crops,
+      allowStructures,
+      allowLand: s.mode === 'freeplay',
+      allowFeed,
+      tiles: s.board,
+    };
   };
 
   /** Can the player afford `n` coins? Toasts on a shortfall. */
@@ -304,6 +346,7 @@ export const useGameStore = create<GameState>((set, get) => {
         set((s) => ({ coins: s.coins + gain }));
         patchTile(r, c, harvestPatch(t));
         trackPuzzleHarvest(crop);
+        trackPuzzleEarned(gain);
         return { fx: 'harvest', r, c, gain, color: CROPS[crop].color };
       }
       case 'uproot': {
@@ -325,9 +368,11 @@ export const useGameStore = create<GameState>((set, get) => {
           return { fx: 'nudge', r, c };
         }
         if (!spend(a.energyCost)) return NONE;
-        const gain = 12 + Math.floor(Math.random() * 20);
+        // Deterministic payout — no RNG, so gathering is puzzle-safe and reproducible.
+        const gain = FISH_COINS;
         set((s) => ({ coins: s.coins + gain }));
         patchTile(r, c, { pondStock: (t.pondStock ?? 0) - 1 });
+        trackPuzzleEarned(gain);
         markSeen('fish');
         get().toast('Caught a fish!', 'ok');
         return { fx: 'fish', r, c, gain };
@@ -339,13 +384,17 @@ export const useGameStore = create<GameState>((set, get) => {
         }
         if (!spend(a.energyCost)) return NONE;
         const charges = (t.rockCharges ?? 0) - 1;
-        const gain = 8 + Math.floor(Math.random() * 12);
-        const gem = Math.random() < 0.22 ? 1 : 0;
+        // Deterministic: fixed coins per pull, and a gem on the LAST pull of the cycle (charges
+        // hit 0 → the rock goes dormant). Derived from the charge counter — no new Tile fields.
+        const gain = ORE_COINS;
+        const gem = charges <= 0 ? 1 : 0;
         set((s) => ({ coins: s.coins + gain, gems: s.gems + gem }));
         patchTile(r, c, {
           rockCharges: charges,
           rockDormant: charges <= 0 ? ROCK_DORMANT_NIGHTS : (t.rockDormant ?? 0),
         });
+        // Coin income counts toward a coin objective; the gem bonus does not.
+        trackPuzzleEarned(gain);
         markSeen('ore');
         if (gem) markSeen('gem');
         get().toast(gem ? 'Struck a gem! +1' : 'Mined ore', 'ok');
@@ -480,7 +529,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
     beginTap: (r, c, cx, cy) => {
       if (get().phase !== 'day') return NONE;
-      const t = get().board[tileIndex(r, c)];
+      const t = findTile(get().board, r, c);
       if (!t) return NONE;
       const acts = actionsFor(t, ctxFromState());
       // No secondary choices ⇒ run the lone default straight away; else open the radial.
@@ -509,7 +558,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const a = hi < 0 ? radial.primary : radial.ring[hi];
       set({ radial: null, radialHi: -1 });
       if (!a) return NONE;
-      const t = get().board[tileIndex(radial.r, radial.c)];
+      const t = findTile(get().board, radial.r, radial.c);
       if (!t) return NONE;
       const res = execAction(t, a);
       get().save();
@@ -582,16 +631,36 @@ export const useGameStore = create<GameState>((set, get) => {
       get().save();
     },
 
+    buyExpansion: () => {
+      const { boardTier, coins, board } = get();
+      const nextTier = boardTier + 1;
+      const tier = BOARD_TIERS[nextTier];
+      if (!tier) {
+        get().toast('The farm is already at full size', 'bad');
+        return;
+      }
+      if (coins < tier.cost) {
+        get().toast('Not enough coins', 'bad');
+        return;
+      }
+      // Grow the board, re-centring the existing farm — every planted/built tile is preserved.
+      const nextBoard = expandBoard(board, tier.size);
+      set((s) => ({ coins: s.coins - tier.cost, boardTier: nextTier, board: nextBoard }));
+      get().toast(`Farm expanded to ${tier.size}×${tier.size}!`, 'ok');
+      get().save();
+    },
+
     rebloom: () => {
       // First-pass prestige: reset the farm, keep a compounding Bloom + a gem dividend.
-      // Economy still being modelled — see docs/design/GDD.md.
+      // Economy still being modelled — see docs/design/GDD.md. The owned board tier is kept
+      // (a fresh grass board at the current size), not reset to 1×1.
       set((s) => ({
         coins: 220,
         gems: s.gems + 8,
         day: 1,
         energy: s.maxEnergy,
         bloom: Math.round(s.bloom * 1.6 * 10) / 10,
-        board: createBoard(),
+        board: createFreeplayBoard(s.boardTier),
         storeOpen: false,
       }));
       get().toast('Rebloomed! Harvest multiplier up', 'ok');
@@ -622,6 +691,7 @@ export const useGameStore = create<GameState>((set, get) => {
         energy: s.energy,
         maxEnergy: s.maxEnergy,
         bloom: s.bloom,
+        boardTier: s.boardTier,
         board: s.board,
         upgrades: s.upgrades,
         seen: s.seen,
@@ -641,6 +711,7 @@ function applySave(set: (partial: Partial<GameState>) => void, save: SaveState):
     energy: Math.min(save.energy, maxEnergy),
     maxEnergy,
     bloom: save.bloom,
+    boardTier: save.boardTier,
     board: save.board,
     upgrades: save.upgrades,
     seen: save.seen,

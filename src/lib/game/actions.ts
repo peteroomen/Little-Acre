@@ -58,6 +58,10 @@ export interface ActionCtx {
   crops: CropId[];
   allowStructures: boolean;
   allowLand: boolean;
+  /** Whether Feed (fertilize) is offered on a growing crop (Freeplay: on; puzzle: per-def, default off). */
+  allowFeed: boolean;
+  /** The full board — needed for the sprinkler-adjacency check behind the Water default. */
+  tiles: Tile[];
 }
 
 /** Coin cost to fertilize (feed) a growing crop one stage. */
@@ -203,12 +207,12 @@ function rawActionsFor(t: Tile, ctx: ActionCtx): TileActions {
       if (isRipe(t)) return { primary: harvestAction(t.crop), ring: [uprootAction] };
       // Growing crop: quick-tap waters it (when it needs it); the ring feeds / uproots it.
       const ring: TileAction[] = [];
-      if (t.stage < cropGrow(t.crop)) ring.push(fertilizeAction);
+      if (ctx.allowFeed && t.stage < cropGrow(t.crop)) ring.push(fertilizeAction);
       ring.push(uprootAction);
       if (ctx.allowStructures && !t.structure) {
         ring.push(structAction('sprinkler'), structAction('scarecrow'));
       }
-      return { primary: needsWater(t) ? waterAction : null, ring };
+      return { primary: needsWater(t, ctx.tiles) ? waterAction : null, ring };
     }
     default:
       return { primary: null, ring: [] };

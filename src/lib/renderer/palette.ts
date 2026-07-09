@@ -76,6 +76,12 @@ export const SPRINKLER = {
   drop: '#6cc3de',
 } as const;
 
+/** Sprinkler coverage-preview glow — a soft water-toned plus-shape tint (alpha at draw time). */
+export const COVERAGE = {
+  fill: '#6cc3de',
+  edge: '#c1ebf3',
+} as const;
+
 export const SCARECROW = {
   post: '#9a6a3b',
   head: '#e0ba76',
