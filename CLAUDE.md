@@ -269,7 +269,23 @@ Trade-offs — what this makes easier or harder.
 - **Phase:** M0 scaffold shipped; M2 economy underway (crops + upgrades landed); **Modes shipped** —
   Main Menu + Freeplay + **8 Puzzles** (3 tutorials + 5 solver-locked challenges); contextual
   controls shipped; **puzzle megaslice shipped** (this session).
-- **This session (2026-07-09): "Puzzle-Vision Alignment" megaslice** (branch
+- **This session (2026-07-09, later): "Megaslice 2" — playtest response + expansion + design wave**
+  (same branch, PR #6 open). 4 Opus agents, 2 waves. **Goal-tier stars** replace night-thresholds:
+  `stars {two, three}` = progress targets, objective = 1★ base with slack, 3★ = solver-locked
+  exact max (instant win on reach; deadline scoring otherwise; 0-night Sleep → "End Day"); all 8
+  puzzles retiered (market-day 2/3/4 @13⚡ fixes the owner's unwinnable run; patient-vine early-cash
+  = 2★ not a loss); harness v3 checks ladder + base-slack + tier3==max (~90s). **Uproot confirm**
+  (arm-then-confirm on live crops). **Freeplay board expansion:** starts 1×1 wild grass;
+  `BOARD_TIERS` 1×1/3×3(150c)/5×5(600c placeholders — owner balance pass pending), `expandBoard`
+  re-centres with state preserved, save **v5** (v4 → 3×3 verbatim), renderer N×N; puzzles pinned
+  3×3. **Design wave (mockups):** Store restyled (tabs/Expand tier cards/Boost/presentational
+  Craft with locked recipes/quiet Rebloom); farm HUD per mockup (370px Sleep clip fixed); radial
+  petals restyled (cost chips, unaffordable dim; geometry untouched); **Sunrise Report** card
+  (additive `NightResult.restocked/recovered`; puzzle mode keeps the toast). lint/type-check/build
+  clean, **135 tests** (+25); harness green. See `docs/work/2026-07-09-megaslice-2-playtest.md`.
+  **Next:** owner feel-pass on PR #6; balance pass (expansion costs, economy); coins-objective
+  puzzle; processing chains; remaining Design-Drop roadmap.
+- **Prior session (2026-07-09): "Puzzle-Vision Alignment" megaslice** (branch
   `claude/game-puzzle-potential-bu4nri`, pushed for owner feel-pass — PR after). Orchestrated 4
   Opus agents (2 waves) + orchestrator integration. **New tooling:** `scripts/puzzle-solver.mjs`
   (exact optimal-play search over the real rules — same-day feed chains, fruit-holding, uproot,

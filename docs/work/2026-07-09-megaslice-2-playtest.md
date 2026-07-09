@@ -59,10 +59,10 @@ on wake.
 
 ## Steps
 
-- [ ] Wave 1: S1 + S2 (Opus, worktrees) → review, integrate, full gates + harness
-- [ ] Wave 2: S3 + S4 on integrated base → review, integrate
-- [ ] Full gate: lint / type-check / test / build / check-puzzle-pars
-- [ ] Playwright smoke + screenshots; push (PR #6 updates)
+- [x] Wave 1: S1 + S2 (Opus, worktrees) → review, integrate, full gates + harness
+- [x] Wave 2: S3 + S4 on integrated base → review, integrate
+- [x] Full gate: lint / type-check / test / build / check-puzzle-pars
+- [x] Playwright smoke + screenshots; push (PR #6 updates)
 
 ## Manual test steps
 
@@ -85,10 +85,48 @@ economy numbers beyond placeholder expansion costs.
 
 ## What actually happened
 
+4 Opus agents in 2 waves, orchestrator-integrated; PR #6 updated in place.
+
+- **S1 — goal-tier stars:** `stars: {two, three}` are progress targets on the objective metric;
+  base = 1★ with slack, 3★ = solver-proven exact max (3★+1 infeasible), instant win at 3★,
+  deadline scoring otherwise. All 8 puzzles retiered (first-sprout 3/6/9 @10⚡ · dry-spell 4/5/6 ·
+  vine-and-again 4/6/8 nl7 · market-day 2/3/4 @13⚡ — the playtest unwinnability fix ·
+  patient-vine 2/3/4 (early-cash = 2★) · seed-money 3/5/6 nl8 · thirsty-work 12/17/22 ·
+  waterworks 4/6/9). 0-night Sleep → **End Day**. **Uproot confirm** (`uprootNeedsConfirm`,
+  arm-then-confirm like the sleep guard). Harness v3 validates ladder/base-slack/tier3==max.
+- **S2 — board expansion:** `BOARD_TIERS` 1×1(0c)/3×3(150c)/5×5(600c placeholder costs),
+  `createFreeplayBoard`/`expandBoard` (re-centres old square, state preserved, pure+tested),
+  `boardTier` + `buyExpansion`, save **v5** (v4 → 3×3 tier verbatim), renderer N×N with per-size
+  scale + deterministic geometry, new freeplay starts 1 wild grass tile; puzzles pinned 3×3.
+- **S3 — Store restyle (design):** mockup shell/tabs; Expand tier cards (Current/next/locked)
+  wired to buyExpansion; Boost cards restyled; presentational Craft tab (ingredient chips,
+  locked "Needs Furnace" silhouettes, nothing pretend-interactive); Almanac restyle; Rebloom
+  demoted to a quiet row.
+- **S4 — HUD/radial/Sunrise (design):** HUD chips per mockup, **370px Sleep clip fixed**
+  (stacked currency chips); radial petals with swatch/label/cost chips + unaffordable dim +
+  amber highlight (geometry untouched); **Sunrise Report** card on freeplay wake — additive
+  `NightResult.restocked/recovered` tallies in resolveNight (+3 tests), `report` flag in store;
+  puzzles keep the compact toast.
+
+Two Wave-1 agents strayed into the shared checkout (branch switches + a staged inversion of
+S2's work); restored from committed state, no loss; Wave-2 agents got explicit git discipline
+and stayed clean. Final gates: lint / type-check / **135 tests** (110 → 135) / build / harness
+92s — all green.
+
 ## Files created / modified
+
+`src/lib/game/`: tiles.ts, save.ts (v5), store.ts, puzzles.ts, actions.ts (+ tests) ·
+`src/lib/renderer/board-renderer.ts` · `src/components/`: Game.tsx, ui/Hud.tsx, ui/RadialMenu.tsx,
+ui/SunriseReport.tsx (new), ui/StoreModal.tsx, ui/PuzzleOverlays.tsx, ui/PuzzleSelect.tsx ·
+`src/app/globals.css` · `scripts/check-puzzle-pars.mjs` (v3)
 
 ## Deferred to next session
 
+Expansion costs + Market Day/coin economy = owner balance pass (placeholders flagged in
+BOARD_TIERS). Remaining Design-Drop roadmap items (menu board backdrop, minigame overlays,
+landscape, token completion). docs/design/puzzles.md still describes old P1–P5. Radial radius
+kept at 64 (mockup shows 98/112 — revisit with a feel pass since it lives in actions.ts).
+
 ## Status
 
-- [x] In progress - [ ] Complete - [ ] Partial — see deferred
+- [ ] In progress - [x] Complete - [ ] Partial — see deferred
