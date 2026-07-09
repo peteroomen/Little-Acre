@@ -75,12 +75,12 @@ Every wave ends with `pnpm lint && pnpm type-check && pnpm test` clean plus
 
 ## Steps
 
-- [ ] Confirm plan with owner (this doc)
-- [ ] Wave 1: launch WS-A + WS-C agents (worktrees, Opus), review diffs, integrate, gates green
-- [ ] Wave 2: launch WS-B + WS-D agents on the integrated base, review, integrate
-- [ ] Full gate: lint / type-check / test / `check-puzzle-pars.mjs --strict` / build
-- [ ] Playwright smoke of the five new puzzles + tutorials (feed correctly gated)
-- [ ] Push branch for owner testing; PR after owner feel-pass
+- [x] Confirm plan with owner (this doc)
+- [x] Wave 1: launch WS-A + WS-C agents (worktrees, Opus), review diffs, integrate, gates green
+- [x] Wave 2: launch WS-B + WS-D agents on the integrated base, review, integrate
+- [x] Full gate: lint / type-check / test / `check-puzzle-pars.mjs` / build
+- [x] Playwright smoke (menu → puzzle select shelves → Market Day today-only banner; screenshots)
+- [x] Push branch for owner testing; PR after owner feel-pass
 
 ## Manual test steps
 
@@ -103,10 +103,50 @@ settings screen, Supabase. Star-fill animation. Freeplay economy rebalance beyon
 
 ## What actually happened
 
+Ran as planned: 4 Opus agents in isolated worktrees (2 waves), orchestrator integrated each onto
+this branch. Two agents were interrupted by session token limits and resumed cleanly.
+
+- **WS-A (rules):** tomato → reyield 4 / regrow 1 (2⚡/harvest amortized — the keep-alive niche is
+  real); sprinklers water a plus-shape via pure `isAutoWatered`; `needsWater(t, tiles)` is
+  board-aware; gathering deterministic (`FISH_COINS 18`, `ORE_COINS 13`, gem on a rock cycle's
+  last pull); `ActionCtx.allowFeed` + `PuzzleDef.allowFeed` (tutorials off — kills the 0-night
+  feed cheese). No save bump needed.
+- **WS-C (solver v2):** structures + positional/spatial mode (symmetry-pruned), scarecrow pause,
+  coins-earned objectives, deterministic gather income, injectable crop defs; harness validates
+  par == optimal AND par−1 infeasible per puzzle + old-rules regression (2/3/6) + pinned feature
+  checks. Sweep proved the retune creates tomato's niche only at E≤5 → Thirsty Work authored at 5⚡.
+- **Integration retune:** vine-and-again stars {three: 5, two: 6} (solver-locked; retuned vine).
+- **WS-B (puzzles):** objective union (harvest | coins-earned), `section` shelves, `boardFrom`
+  rich boards, nightLimit-0 flow, `allowStructures`; five knife-edge challenges — market-day
+  (0 nights, feed chains), the-patient-vine (hold-the-ripe-fruit, par 4), seed-money (bootstrap,
+  par 5), thirsty-work (5⚡ crop mix, par 7 — mixing beats both mono-crops), waterworks (sprinkler
+  placement, par 2). Corrections found: thirsty-work par 7 not 8 (mixed line); patient-vine's
+  vine starts harvests=1 or the retuned tomato dissolves the triage.
+- **WS-D (UI):** tutorial/challenge shelves; banner variants (coins tint, today-only dusk badge);
+  Sleep guard in 0-night puzzles (2-tap confirm); result modal staggered star-pop + par line;
+  `BoardRenderer.setCoverageHint()` sprinkler plus-glow wired from Game's radial subscription.
+  Playwright smoke passed (select shelves, Market Day banner).
+
+Final gates: lint / type-check / **110 tests** (77 → 110) / build / harness 22s all green.
+
 ## Files created / modified
+
+- `src/lib/game/`: tiles.ts, actions.ts, store.ts, puzzles.ts (+ tests: tiles, actions, puzzles)
+- `src/lib/renderer/`: palette.ts, board-renderer.ts
+- `src/components/`: Game.tsx, ui/Hud.tsx, ui/PuzzleSelect.tsx, ui/PuzzleOverlays.tsx
+- `src/app/globals.css`
+- `scripts/`: puzzle-solver.mjs (new, exact-play solver), check-puzzle-pars.mjs (new, harness)
+- `docs/design/claude-design-prompt.md` (refreshed), this plan file
 
 ## Deferred to next session
 
+- Owner feel-pass on live build, then PR. Coverage preview + star-fill not Playwright-driven
+  (need canvas drag / a completed run) — verify manually.
+- No shipped puzzle uses a `coins` objective yet (engine/solver/UI all support it).
+- docs/design/puzzles.md still describes the old P1–P5 (processing chains P3–P5 remain future);
+  update alongside the processing slice.
+- Freeplay-economy knock-ons of the tomato retune + deterministic gathering (owner balance pass).
+
 ## Status
 
-- [x] In progress - [ ] Complete - [ ] Partial — see deferred
+- [ ] In progress - [x] Complete - [ ] Partial — see deferred
