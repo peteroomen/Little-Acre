@@ -80,6 +80,92 @@ const SHIPPED = [
     srcStars: { three: 5, two: 6 },
     stars: { three: 5, two: 6 },
   },
+  // ── challenge puzzles (megaslice Wave 2 / WS-B). Boards mirror the src makeBoard layouts with
+  // flower fillers OMITTED — flowers offer no verb, so they don't exist to the solver. Grass IS
+  // modelled ('G' is tillable). allowedStructures mirrors the def's allowStructures flag, which
+  // in-game gates BOTH sprinkler and scarecrow. ─────────────────────────────────
+  {
+    // 0-night feed-chain speedrun: till→plant→feed×2→harvest→(plant→feed×2→harvest)×2 on one
+    // tile = 10⚡ / 20c working capital. The 0-night knife-edge has no night to shave, so the
+    // resource knife (9⚡ / 19c infeasible) is pinned in FEATURES below.
+    id: 'market-day',
+    board: tiles({ G: 3 }),
+    coins: 20,
+    energy: 10,
+    builds: ['carrot'],
+    objective: { kind: 'harvest', crop: 'carrot', count: 3 },
+    nightLimit: 0,
+    allowFeed: true,
+    srcStars: { three: 0, two: 0 },
+    stars: { three: 0, two: 0 },
+  },
+  {
+    // Pre-grown triage: ripe vine (3 fruits left) + stage-1 potato at 1⚡/day. The potato must
+    // be watered nights 1–2 while the ripe fruit HOLDS; par 4. Harvesting the vine immediately
+    // caps the board at 3 (pinned in FEATURES: the vine alone can't reach 4).
+    id: 'the-patient-vine',
+    board: ['tomato:4:1', 'potato:1:0'],
+    coins: 0,
+    energy: 1,
+    builds: [],
+    objective: { kind: 'harvest', crop: 'any', count: 4 },
+    nightLimit: 6,
+    allowFeed: false,
+    srcStars: { three: 4, two: 5 },
+    stars: { three: 4, two: 5 },
+  },
+  {
+    // Bootstrap ladder: 4c = one carrot seed; its 20c sale (night 2) funds all 3 potato seeds,
+    // which ripen 3 nights later ⇒ par 5. Potato-only is infeasible (FEATURES) — the lesson.
+    id: 'seed-money',
+    board: tiles({ E: 3 }),
+    coins: 4,
+    energy: 6,
+    builds: ['carrot', 'potato'],
+    objective: { kind: 'harvest', crop: 'potato', count: 3 },
+    nightLimit: 7,
+    allowFeed: false,
+    srcStars: { three: 5, two: 6 },
+    stars: { three: 5, two: 6 },
+  },
+  {
+    // Energy-scarce crop choice: 5⚡ throttles carrot's replant loop (3⚡/harvest sustained) while
+    // a ripe vine costs 1⚡/fruit. Mixed carrot+tomato par 7; carrot-only 9 and tomato-only 8 are
+    // pinned in FEATURES. (The Wave-1 sweep's "optimal 8" was tomato-ONLY — mixing beats it.)
+    id: 'thirsty-work',
+    board: tiles({ E: 6 }),
+    coins: 40,
+    energy: 5,
+    builds: ['carrot', 'tomato'],
+    objective: { kind: 'harvest', crop: 'any', count: 12 },
+    nightLimit: 10,
+    allowFeed: false,
+    srcStars: { three: 7, two: 8 },
+    stars: { three: 7, two: 8 },
+  },
+  {
+    // Sprinkler placement: 76c = one sprinkler (60c) + 4 carrot seeds exactly; 5⚡ = place + plant
+    // 4. Centre placement covers the whole plus ⇒ par 2. Hand-watering (no sprinkler), 75c, and
+    // 4⚡ are all pinned in FEATURES. Scarecrow is placeable too (allowStructures gates both) —
+    // it can't beat the sprinkler line, and the par run proves it.
+    id: 'waterworks',
+    board: [
+      { r: 0, c: 1, base: 'E', struct: '' },
+      { r: 1, c: 0, base: 'E', struct: '' },
+      { r: 1, c: 1, base: 'E', struct: '' },
+      { r: 1, c: 2, base: 'E', struct: '' },
+      { r: 2, c: 1, base: 'E', struct: '' },
+    ],
+    coins: 76,
+    energy: 5,
+    builds: ['carrot'],
+    allowedStructures: ['sprinkler', 'scarecrow'],
+    objective: { kind: 'harvest', crop: 'carrot', count: 4 },
+    nightLimit: 4,
+    allowFeed: false,
+    srcStars: { three: 2, two: 3 },
+    stars: { three: 2, two: 3 },
+  },
 ];
 
 const sweepMode = process.argv.includes('--sweep-tomato');
@@ -96,6 +182,7 @@ for (const p of SHIPPED) {
     builds: p.builds,
     objective: p.objective,
     allowFeed: p.allowFeed,
+    allowedStructures: p.allowedStructures ?? [],
   };
   const par = solve({ ...base, maxNights: p.nightLimit }).minNights;
   const parOk = par === p.stars.three;
@@ -106,9 +193,12 @@ for (const p of SHIPPED) {
   const knifeOk = knife === null;
   if (!parOk || !knifeOk) failed = true;
 
+  const knifeMsg =
+    p.stars.three === 0
+      ? 'skipped (0-night par — resource knives pinned in FEATURES)'
+      : `knife-edge(${p.stars.three - 1}n)=${knifeOk ? 'infeasible OK' : `FEASIBLE (slack!) FAIL`}`;
   console.log(
-    `${p.id.padEnd(16)} optimal=${par ?? 'infeasible'} vs 3★=${p.stars.three}  ${parOk ? 'OK' : 'FAIL'}` +
-      `   knife-edge(${p.stars.three - 1}n)=${knifeOk ? 'infeasible OK' : `FEASIBLE (slack!) FAIL`}`,
+    `${p.id.padEnd(16)} optimal=${par ?? 'infeasible'} vs 3★=${p.stars.three}  ${parOk ? 'OK' : 'FAIL'}   ${knifeMsg}`,
   );
   if (p.stars.three !== p.srcStars.three || p.stars.two !== p.srcStars.two) {
     console.log(
@@ -120,8 +210,10 @@ for (const p of SHIPPED) {
 
 // ---- regression path: OLD tomato numbers must reproduce the original pars ------
 console.log('\n=== REGRESSION (old tomato reyield 3 / regrow 2, feed off) ===');
+// Only the three tutorials predate the retune — the Wave-2 challenges have no old-rules par.
 const OLD_PARS = { 'first-sprout': 2, 'dry-spell': 3, 'vine-and-again': 6 };
 for (const p of SHIPPED) {
+  if (!(p.id in OLD_PARS)) continue;
   const par = solve({
     tiles: p.board,
     coins: p.coins,
@@ -254,6 +346,157 @@ const FEATURES = [
       builds: ['carrot'],
       objective: { kind: 'coins', amount: 20 },
       maxNights: 3,
+      allowFeed: false,
+    },
+  },
+  // ── Wave-2 challenge knife-edges + lessons (WS-B). The 0-night market-day par can't shave a
+  // night, so its knife-edge is pinned on resources instead; the others pin each puzzle's lesson.
+  {
+    // Market Day resource knife 1: one fewer energy breaks the 10⚡ feed-chain line.
+    name: 'market-day: 9 energy infeasible',
+    expect: null,
+    cfg: {
+      tiles: tiles({ G: 3 }),
+      coins: 20,
+      energy: 9,
+      builds: ['carrot'],
+      objective: { kind: 'harvest', crop: 'carrot', count: 3 },
+      maxNights: 0,
+      allowFeed: true,
+    },
+  },
+  {
+    // Market Day resource knife 2: one fewer coin breaks the 20c working-capital loop.
+    name: 'market-day: 19 coins infeasible',
+    expect: null,
+    cfg: {
+      tiles: tiles({ G: 3 }),
+      coins: 19,
+      energy: 10,
+      builds: ['carrot'],
+      objective: { kind: 'harvest', crop: 'carrot', count: 3 },
+      maxNights: 0,
+      allowFeed: true,
+    },
+  },
+  {
+    // Patient Vine lesson: the vine alone caps at its 3 remaining fruits — cashing it early
+    // (potato wilts) can never reach 4. Holding the ripe fruit while the potato ripens is forced.
+    name: 'patient-vine: vine alone caps at 3',
+    expect: null,
+    cfg: {
+      tiles: ['tomato:4:1'],
+      coins: 0,
+      energy: 1,
+      builds: [],
+      objective: { kind: 'harvest', crop: 'any', count: 4 },
+      maxNights: 8,
+      allowFeed: false,
+    },
+  },
+  {
+    // Seed Money lesson: without the carrot ladder, 4c can't even buy a potato seed.
+    name: 'seed-money: potato-only infeasible',
+    expect: null,
+    cfg: {
+      tiles: tiles({ E: 3 }),
+      coins: 4,
+      energy: 6,
+      builds: ['potato'],
+      objective: { kind: 'harvest', crop: 'potato', count: 3 },
+      maxNights: 8,
+      allowFeed: false,
+    },
+  },
+  {
+    // Thirsty Work lesson (a): carrot-only is 2 nights slower than the mixed par of 7.
+    name: 'thirsty-work: carrot-only takes 9',
+    expect: 9,
+    cfg: {
+      tiles: tiles({ E: 6 }),
+      coins: 40,
+      energy: 5,
+      builds: ['carrot'],
+      objective: { kind: 'harvest', crop: 'any', count: 12 },
+      maxNights: 10,
+      allowFeed: false,
+    },
+  },
+  {
+    // Thirsty Work lesson (b): tomato-only takes 8 — mixing the two is what makes par.
+    name: 'thirsty-work: tomato-only takes 8',
+    expect: 8,
+    cfg: {
+      tiles: tiles({ E: 6 }),
+      coins: 40,
+      energy: 5,
+      builds: ['tomato'],
+      objective: { kind: 'harvest', crop: 'any', count: 12 },
+      maxNights: 10,
+      allowFeed: false,
+    },
+  },
+  {
+    // Waterworks lesson: no sprinkler ⇒ hand-watering at 5⚡ doubles the nights (4 vs par 2).
+    name: 'waterworks: no sprinkler takes 4',
+    expect: 4,
+    cfg: {
+      tiles: [
+        { r: 0, c: 1, base: 'E', struct: '' },
+        { r: 1, c: 0, base: 'E', struct: '' },
+        { r: 1, c: 1, base: 'E', struct: '' },
+        { r: 1, c: 2, base: 'E', struct: '' },
+        { r: 2, c: 1, base: 'E', struct: '' },
+      ],
+      coins: 76,
+      energy: 5,
+      builds: ['carrot'],
+      allowedStructures: [],
+      spatial: true,
+      objective: { kind: 'harvest', crop: 'carrot', count: 4 },
+      maxNights: 4,
+      allowFeed: false,
+    },
+  },
+  {
+    // Waterworks resource knife 1: 75c can't afford sprinkler + all four seeds within par.
+    name: 'waterworks: 75 coins misses par',
+    expect: null,
+    cfg: {
+      tiles: [
+        { r: 0, c: 1, base: 'E', struct: '' },
+        { r: 1, c: 0, base: 'E', struct: '' },
+        { r: 1, c: 1, base: 'E', struct: '' },
+        { r: 1, c: 2, base: 'E', struct: '' },
+        { r: 2, c: 1, base: 'E', struct: '' },
+      ],
+      coins: 75,
+      energy: 5,
+      builds: ['carrot'],
+      allowedStructures: ['sprinkler', 'scarecrow'],
+      objective: { kind: 'harvest', crop: 'carrot', count: 4 },
+      maxNights: 2,
+      allowFeed: false,
+    },
+  },
+  {
+    // Waterworks resource knife 2: 4⚡ can't place the sprinkler AND plant all four on day 0.
+    name: 'waterworks: 4 energy misses par',
+    expect: null,
+    cfg: {
+      tiles: [
+        { r: 0, c: 1, base: 'E', struct: '' },
+        { r: 1, c: 0, base: 'E', struct: '' },
+        { r: 1, c: 1, base: 'E', struct: '' },
+        { r: 1, c: 2, base: 'E', struct: '' },
+        { r: 2, c: 1, base: 'E', struct: '' },
+      ],
+      coins: 76,
+      energy: 4,
+      builds: ['carrot'],
+      allowedStructures: ['sprinkler', 'scarecrow'],
+      objective: { kind: 'harvest', crop: 'carrot', count: 4 },
+      maxNights: 2,
       allowFeed: false,
     },
   },

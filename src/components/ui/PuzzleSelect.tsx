@@ -1,7 +1,11 @@
 'use client';
 
-import { cropPlural, isPuzzleUnlocked, PUZZLES } from '@/lib/game/puzzles';
-import type { CropId } from '@/lib/game/tiles';
+import {
+  isPuzzleUnlocked,
+  objectiveLabel,
+  PUZZLES,
+  type PuzzleObjective,
+} from '@/lib/game/puzzles';
 import { useGameStore } from '@/lib/game/store';
 
 /** Puzzle picker: a card per puzzle with its goal + best stars; sequential unlock. */
@@ -47,7 +51,7 @@ export function PuzzleSelect() {
                 </div>
                 <div className="mt-0.5 text-xs leading-snug text-[#7a6547]">
                   {unlocked
-                    ? goalLine(p.objective.count, p.objective.crop, p.nightLimit)
+                    ? goalLine(p.objective, p.nightLimit)
                     : 'Earn a star on the previous puzzle to unlock.'}
                 </div>
               </div>
@@ -59,8 +63,9 @@ export function PuzzleSelect() {
   );
 }
 
-function goalLine(count: number, crop: CropId | 'any', nights: number): string {
-  return `Harvest ${count} ${cropPlural(crop, count)} in ${nights} nights`;
+function goalLine(objective: PuzzleObjective, nights: number): string {
+  const when = nights === 0 ? 'today' : `in ${nights} night${nights === 1 ? '' : 's'}`;
+  return `${objectiveLabel(objective)} ${when}`;
 }
 
 /** Three star slots, filled up to `value`. */

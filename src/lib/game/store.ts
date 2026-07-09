@@ -8,7 +8,15 @@ import {
   SAVE_VERSION,
   type SaveState,
 } from './save';
-import { getPuzzle, registerHarvest, registerNight, starsFor, type PuzzleState } from './puzzles';
+import {
+  getPuzzle,
+  registerEarned,
+  registerHarvest,
+  registerNight,
+  starsFor,
+  type PuzzleDef,
+  type PuzzleState,
+} from './puzzles';
 import { actionsFor, type ActionCtx, type TileAction } from './actions';
 import {
   CROPS,
@@ -209,13 +217,8 @@ export const useGameStore = create<GameState>((set, get) => {
     set((s) => ({ seen: { ...s.seen, [key]: 1 } }));
   };
 
-  /** Record a harvest against the active puzzle objective; persist best stars on a win. */
-  const trackPuzzleHarvest = (crop: CropId) => {
-    const run = get().puzzle;
-    if (get().mode !== 'puzzle' || !run) return;
-    const def = getPuzzle(run.id);
-    if (!def) return;
-    const next = registerHarvest(def, run, crop);
+  /** Commit a reduced puzzle state to the active run; persist best stars on a win. */
+  const commitPuzzle = (def: PuzzleDef, run: PuzzleRun, next: PuzzleState) => {
     const patch: PuzzleRun = { ...run, ...next };
     if (next.status === 'won') {
       const stars = starsFor(def, next.nightsUsed);
@@ -230,6 +233,27 @@ export const useGameStore = create<GameState>((set, get) => {
     set({ puzzle: patch });
   };
 
+  /** Record a harvest against the active puzzle objective (no-op for coin objectives). */
+  const trackPuzzleHarvest = (crop: CropId) => {
+    const run = get().puzzle;
+    if (get().mode !== 'puzzle' || !run) return;
+    const def = getPuzzle(run.id);
+    if (!def) return;
+    commitPuzzle(def, run, registerHarvest(def, run, crop));
+  };
+
+  /**
+   * Record coins EARNED (harvest sells + fish/mine income) against a coin objective. Spending
+   * never reduces progress — registerEarned only accumulates (no-op for harvest objectives).
+   */
+  const trackPuzzleEarned = (amount: number) => {
+    const run = get().puzzle;
+    if (get().mode !== 'puzzle' || !run) return;
+    const def = getPuzzle(run.id);
+    if (!def) return;
+    commitPuzzle(def, run, registerEarned(def, run, amount));
+  };
+
   /** The action context for the active run: which crops/structures/land a tile may offer. */
   const ctxFromState = (): ActionCtx => {
     const s = get();
@@ -237,9 +261,11 @@ export const useGameStore = create<GameState>((set, get) => {
     const crops = def ? (def.builds ?? []).filter(isCrop) : (Object.keys(CROPS) as CropId[]);
     // Feed is on in Freeplay; in a puzzle it follows the def (default off, so tutorials hide it).
     const allowFeed = s.mode === 'freeplay' ? true : (def?.allowFeed ?? false);
+    // Structures follow the def in a puzzle (default off — only spatial puzzles opt in).
+    const allowStructures = s.mode === 'freeplay' ? true : (def?.allowStructures ?? false);
     return {
       crops,
-      allowStructures: s.mode === 'freeplay',
+      allowStructures,
       allowLand: s.mode === 'freeplay',
       allowFeed,
       tiles: s.board,
@@ -312,6 +338,7 @@ export const useGameStore = create<GameState>((set, get) => {
         set((s) => ({ coins: s.coins + gain }));
         patchTile(r, c, harvestPatch(t));
         trackPuzzleHarvest(crop);
+        trackPuzzleEarned(gain);
         return { fx: 'harvest', r, c, gain, color: CROPS[crop].color };
       }
       case 'uproot': {
@@ -337,6 +364,7 @@ export const useGameStore = create<GameState>((set, get) => {
         const gain = FISH_COINS;
         set((s) => ({ coins: s.coins + gain }));
         patchTile(r, c, { pondStock: (t.pondStock ?? 0) - 1 });
+        trackPuzzleEarned(gain);
         markSeen('fish');
         get().toast('Caught a fish!', 'ok');
         return { fx: 'fish', r, c, gain };
@@ -357,6 +385,8 @@ export const useGameStore = create<GameState>((set, get) => {
           rockCharges: charges,
           rockDormant: charges <= 0 ? ROCK_DORMANT_NIGHTS : (t.rockDormant ?? 0),
         });
+        // Coin income counts toward a coin objective; the gem bonus does not.
+        trackPuzzleEarned(gain);
         markSeen('ore');
         if (gem) markSeen('gem');
         get().toast(gem ? 'Struck a gem! +1' : 'Mined ore', 'ok');

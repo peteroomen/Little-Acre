@@ -1,6 +1,12 @@
 'use client';
 
-import { cropPlural, getPuzzle, isPuzzleUnlocked, PUZZLES } from '@/lib/game/puzzles';
+import {
+  getPuzzle,
+  isPuzzleUnlocked,
+  objectiveLabel,
+  objectiveTarget,
+  PUZZLES,
+} from '@/lib/game/puzzles';
 import { useGameStore } from '@/lib/game/store';
 
 /** Live objective banner (goal · progress · nights) with a Quit-to-select affordance. */
@@ -13,7 +19,8 @@ export function ObjectiveBanner() {
   const def = getPuzzle(puzzle.id);
   if (!def) return null;
 
-  const { count, crop } = def.objective;
+  // Objective union (harvest | coins): label + target come from the helpers, not the fields.
+  const target = objectiveTarget(def.objective);
   const nightsShown = Math.min(puzzle.nightsUsed, def.nightLimit);
 
   return (
@@ -24,7 +31,7 @@ export function ObjectiveBanner() {
             Objective
           </span>
           <span className="font-pixel text-[13px] text-[#5a462f]">
-            Harvest {count} {cropPlural(crop, count)}
+            {objectiveLabel(def.objective)}
           </span>
         </div>
         <span className="h-7 w-0.5 bg-[#f0cfa8]" />
@@ -33,7 +40,7 @@ export function ObjectiveBanner() {
             Got
           </span>
           <span className="font-pixel text-[15px] font-semibold text-[#c46d38]">
-            {puzzle.progress} / {count}
+            {puzzle.progress} / {target}
           </span>
         </div>
         <span className="h-7 w-0.5 bg-[#f0cfa8]" />
@@ -82,7 +89,7 @@ export function PuzzleIntro() {
         <p className="mt-2.5 text-sm leading-relaxed text-[#7a6547]">{def.blurb}</p>
         <div className="la-notch mx-auto mt-3.5 inline-flex items-center gap-2 bg-[#fff2e4] px-3 py-1.5 shadow-[inset_0_0_0_3px_#f4cfa6]">
           <span className="font-pixel text-[13px] text-[#c46d38]">
-            Harvest {def.objective.count} {cropPlural(def.objective.crop, def.objective.count)}
+            {objectiveLabel(def.objective)}
           </span>
           <span className="h-4 w-0.5 bg-[#f0cfa8]" />
           <span className="font-pixel text-[13px] text-[#6a4bb0]">{def.nightLimit} nights</span>
