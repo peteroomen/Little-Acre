@@ -100,6 +100,74 @@
   --la-locked-sub: #b3a482;
   --la-locked-swatch: #c8bda4;
   --la-locked-glyph: #8a7a5c;
+
+  /* ── S3: store ── mockup Store screen (Little Acre.dc.html, data-screen-label="Store").
+     All chrome hexes the restyled StoreModal needs, kept self-contained. */
+  /* tab bar (on = active) */
+  --la-tab-on-bg: #ffe6bd;
+  --la-tab-on-line: #e6c489;
+  --la-tab-off-bg: #f3e6cc; /* off ring reuses --la-settings-line, off text --la-settings-text */
+
+  /* price / buy buttons */
+  --la-disabled-bg: #efe7d4; /* owned / maxed / soon / unaffordable fill */
+  --la-disabled-line: #ddd2b8;
+  --la-cant-text: #c46d5e; /* unaffordable price ink */
+
+  /* boost level pill */
+  --la-lvl-bg: #ffe6cf; /* "Lv n/max" chip fill; text = --la-orange */
+
+  /* craft (presentational workshop) */
+  --la-craft-bg: #eef4ff; /* info banner fill */
+  --la-craft-line: #cfdcf2;
+  --la-craft-dot: #7ba3d9;
+  --la-craft-dot-line: #b3ccec;
+  --la-craft-text: #5a76a0;
+  --la-need-bg: #f7e3dc; /* "missing ingredient" chip */
+  --la-need-text: #c4523a;
+  --la-need-line: #ecc6ba;
+
+  /* expand tab (board-size tiers — not in mockup; sampled from the S2 stopgap card) */
+  --la-expand-bg: #eaf6e0;
+  --la-expand-line: #cbe6b4;
+  --la-expand-ink: #3f6b2f;
+  --la-expand-sub: #5f7a4c;
+  --la-expand-pill-bg: #d6efc4;
+  --la-expand-pill-text: #4c7a34;
+  --la-expand-cell-on: #7cae4f; /* filled mini-grid cell */
+  --la-expand-cell-off: #cbe6b4; /* faint future mini-grid cell */
+
+  /* almanac resource swatches not carried in game data */
+  --la-fish: #f0894a;
+  --la-ore: #b3ab92;
+}
+
+/* Icon swatch chrome shared across shop / boost / craft / almanac cards
+   (mockup: inset bottom-shade + top-light rim over a flat fill). Pair with .la-notch-5. */
+.la-swatch {
+  box-shadow:
+    inset 0 -4px 0 rgba(0, 0, 0, 0.14),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+.la-swatch-locked {
+  filter: grayscale(1) brightness(0.85);
+}
+
+/* 7px pixel notch — the Store modal shell (mockup uses a heavier corner than the chips). */
+.la-notch-7 {
+  clip-path: polygon(
+    0 7px,
+    7px 7px,
+    7px 0,
+    calc(100% - 7px) 0,
+    calc(100% - 7px) 7px,
+    100% 7px,
+    100% calc(100% - 7px),
+    calc(100% - 7px) calc(100% - 7px),
+    calc(100% - 7px) 100%,
+    7px 100%,
+    7px calc(100% - 7px),
+    0 calc(100% - 7px)
+  );
 }
 
 * {
