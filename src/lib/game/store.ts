@@ -101,6 +101,11 @@ const NONE: ActionResult = { fx: 'none', r: -1, c: -1 };
 export interface NightInfo {
   title: string;
   sub: string;
+  /** Sunrise tallies (set when the night resolves) — drive the Sunrise Report card. */
+  grew?: number;
+  wilted?: number;
+  restocked?: number;
+  recovered?: number;
 }
 
 export type Screen = 'menu' | 'puzzleSelect' | 'game';
@@ -137,6 +142,8 @@ export interface GameState {
   // ── ui state ──
   phase: 'day' | 'night';
   night: NightInfo;
+  /** Whether the Sunrise Report dawn card is showing (Freeplay only). Dismissed via closeReport. */
+  report: boolean;
   /** Open press-hold radial (null = none). Anchored at tile (r,c), centred at canvas (cx,cy). */
   radial: {
     r: number;
@@ -172,6 +179,7 @@ export interface GameState {
   commitRadial: () => ActionResult;
   closeRadial: () => void;
   sleep: () => void;
+  closeReport: () => void;
   buyUpgrade: (id: UpgradeId) => void;
   buyExpansion: () => void;
   rebloom: () => void;
@@ -493,6 +501,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
     phase: 'day',
     night: { title: '', sub: '' },
+    report: false,
     radial: null,
     radialHi: -1,
     uprootArm: null,
@@ -528,6 +537,7 @@ export const useGameStore = create<GameState>((set, get) => {
         puzzle: null,
         phase: 'day',
         night: { title: '', sub: '' },
+        report: false,
         radial: null,
         radialHi: -1,
         uprootArm: null,
@@ -552,6 +562,7 @@ export const useGameStore = create<GameState>((set, get) => {
         upgrades: { ...ZERO_UPGRADES },
         phase: 'day',
         night: { title: '', sub: '' },
+        report: false,
         radial: null,
         radialHi: -1,
         uprootArm: null,
@@ -624,7 +635,7 @@ export const useGameStore = create<GameState>((set, get) => {
         night: { title: `Night ${day}`, sub: 'Watered crops are growing…' },
       });
       window.setTimeout(() => {
-        const { tiles, grew, wilted } = resolveNight(get().board);
+        const { tiles, grew, wilted, restocked, recovered } = resolveNight(get().board);
         const parts: string[] = [];
         if (grew) parts.push(`${grew} grew`);
         if (wilted) parts.push(`${wilted} wilted`);
@@ -635,6 +646,10 @@ export const useGameStore = create<GameState>((set, get) => {
           night: {
             title: 'Sunrise',
             sub: parts.length ? parts.join(' · ') : 'A quiet night on the farm',
+            grew,
+            wilted,
+            restocked,
+            recovered,
           },
         }));
         // Puzzle mode: count the night and, at the deadline, score the run on progress (a 1★/2★
@@ -648,12 +663,20 @@ export const useGameStore = create<GameState>((set, get) => {
       }, NIGHT_GROW_MS);
       window.setTimeout(() => {
         set({ phase: 'day' });
-        const { night } = get();
-        // Surface the sunrise summary as a toast too (it's already computed in `night.sub`).
-        if (night.sub.includes('wilted')) get().toast(night.sub, 'bad');
-        else if (night.sub.includes('grew')) get().toast(night.sub, 'ok');
+        const { night, mode } = get();
+        // Freeplay wakes into the Sunrise Report dawn card (the richer summary lives there).
+        // Puzzles skip the card — a compact toast keeps that chrome minimal.
+        if (mode === 'freeplay') {
+          set({ report: true });
+        } else if (night.sub.includes('wilted')) {
+          get().toast(night.sub, 'bad');
+        } else if (night.sub.includes('grew')) {
+          get().toast(night.sub, 'ok');
+        }
       }, NIGHT_WAKE_MS);
     },
+
+    closeReport: () => set({ report: false }),
 
     buyUpgrade: (id) => {
       const { coins, upgrades } = get();

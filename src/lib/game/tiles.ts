@@ -346,6 +346,10 @@ export interface NightResult {
   tiles: Tile[];
   grew: number;
   wilted: number;
+  /** Ponds that gained fish this night (were below cap and refilled). Feeds the Sunrise Report. */
+  restocked: number;
+  /** Rocks whose dormancy ran out this night and re-charged. Feeds the Sunrise Report. */
+  recovered: number;
 }
 
 /**
@@ -361,6 +365,8 @@ export interface NightResult {
 export function resolveNight(tiles: Tile[]): NightResult {
   let grew = 0;
   let wilted = 0;
+  let restocked = 0;
+  let recovered = 0;
   const next = tiles.map((t) => {
     const nt: Tile = { ...t };
     if (nt.kind === 'tilled' && nt.crop && !nt.wilted && nt.stage < cropGrow(nt.crop)) {
@@ -378,13 +384,19 @@ export function resolveNight(tiles: Tile[]): NightResult {
     }
     nt.watered = false;
     // Gathering nodes recover overnight so fishing/mining stay tended, not infinite.
-    if (nt.kind === 'pond')
-      nt.pondStock = Math.min(POND_MAX, (nt.pondStock ?? POND_MAX) + POND_REFILL);
+    if (nt.kind === 'pond') {
+      const before = nt.pondStock ?? POND_MAX;
+      nt.pondStock = Math.min(POND_MAX, before + POND_REFILL);
+      if (nt.pondStock > before) restocked += 1;
+    }
     if (nt.kind === 'rock' && (nt.rockDormant ?? 0) > 0) {
       nt.rockDormant = (nt.rockDormant ?? 0) - 1;
-      if (nt.rockDormant === 0) nt.rockCharges = ROCK_CHARGES;
+      if (nt.rockDormant === 0) {
+        nt.rockCharges = ROCK_CHARGES;
+        recovered += 1;
+      }
     }
     return nt;
   });
-  return { tiles: next, grew, wilted };
+  return { tiles: next, grew, wilted, restocked, recovered };
 }

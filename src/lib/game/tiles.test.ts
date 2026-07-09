@@ -283,6 +283,48 @@ describe('resolveNight', () => {
       rockDormant: 0,
     });
   });
+
+  it('tallies restocked ponds — only those that actually gained fish', () => {
+    // A below-cap pond gains stock (counts); a full pond does not.
+    const below = resolveNight([tile({ kind: 'pond', crop: null, pondStock: 1 })]);
+    expect(below.restocked).toBe(1);
+    const full = resolveNight([tile({ kind: 'pond', crop: null, pondStock: 4 })]);
+    expect(full.restocked).toBe(0);
+    // Two hungry ponds both count.
+    const two = resolveNight([
+      tile({ r: 0, c: 0, kind: 'pond', crop: null, pondStock: 0 }),
+      tile({ r: 0, c: 1, kind: 'pond', crop: null, pondStock: 2 }),
+    ]);
+    expect(two.restocked).toBe(2);
+  });
+
+  it('tallies recovered rocks — only in the night dormancy hits 0', () => {
+    // A rock with 1 night of dormancy left recovers this night (counts).
+    const now = resolveNight([tile({ kind: 'rock', crop: null, rockCharges: 0, rockDormant: 1 })]);
+    expect(now.recovered).toBe(1);
+    // Still dormant (3 → 2) does not count yet.
+    const later = resolveNight([
+      tile({ kind: 'rock', crop: null, rockCharges: 0, rockDormant: 3 }),
+    ]);
+    expect(later.recovered).toBe(0);
+    // A ready rock never re-counts.
+    const ready = resolveNight([
+      tile({ kind: 'rock', crop: null, rockCharges: 3, rockDormant: 0 }),
+    ]);
+    expect(ready.recovered).toBe(0);
+  });
+
+  it('reports zero tallies on a quiet night', () => {
+    const { grew, wilted, restocked, recovered } = resolveNight([
+      tile({ kind: 'grass', crop: null }),
+    ]);
+    expect({ grew, wilted, restocked, recovered }).toEqual({
+      grew: 0,
+      wilted: 0,
+      restocked: 0,
+      recovered: 0,
+    });
+  });
 });
 
 describe('deterministic gathering payouts', () => {

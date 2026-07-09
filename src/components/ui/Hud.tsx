@@ -6,7 +6,12 @@ import { fmt, fmtBloom } from '@/lib/game/numbers';
 import { getPuzzle, objectiveTarget } from '@/lib/game/puzzles';
 import { useGameStore } from '@/lib/game/store';
 
-/** Top HUD: coin/gem counters (left) and Day · Bloom · Energy + Sleep (right). */
+/**
+ * Top HUD (mockup "Farm"): coins/gems chips stacked at top-left, Day · Bloom + Energy
+ * stacked at top-right with the Sleep sticker beside them. The currencies are stacked
+ * VERTICALLY (not side-by-side) so the right cluster + Sleep never overflow a 370px
+ * portrait — the old row layout clipped the Sleep button off the right edge.
+ */
 export function Hud() {
   const coins = useGameStore((s) => s.coins);
   const gems = useGameStore((s) => s.gems);
@@ -21,6 +26,7 @@ export function Hud() {
   const puzzle = useGameStore((s) => s.puzzle);
   const toast = useGameStore((s) => s.toast);
 
+  const isPuzzle = mode === 'puzzle';
   const energyPct = Math.round((energy / maxEnergy) * 100);
 
   // "Today only" (nightLimit 0) puzzles have no night to sleep through — the Sleep button becomes
@@ -28,7 +34,7 @@ export function Hud() {
   // ending concedes with no stars, so it asks for a confirming second tap first (mirrors the old
   // guard). Once the base is met, End Day is a plain winning tap. Guard is component-level state
   // only — store.sleep is untouched.
-  const guardDef = mode === 'puzzle' && puzzle ? getPuzzle(puzzle.id) : undefined;
+  const guardDef = isPuzzle && puzzle ? getPuzzle(puzzle.id) : undefined;
   const isEndDay = !!guardDef && guardDef.nightLimit === 0;
   const base = guardDef ? objectiveTarget(guardDef.objective) : 0;
   const wouldConcede = isEndDay && (puzzle?.progress ?? 0) < base;
@@ -64,62 +70,95 @@ export function Hud() {
         : undefined;
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
-      {/* Currencies */}
-      <div className="pointer-events-auto flex flex-wrap gap-2.5">
+    <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
+      {/* Currencies — stacked (mockup): coins over gems. */}
+      <div className="pointer-events-auto flex flex-col items-start gap-1.5">
         <Chip
           bg="var(--la-panel-soft)"
           line="var(--la-gold-line)"
+          bottomShade="rgba(150,110,30,.16)"
           dropShadow="var(--la-gold-shadow)"
-          glyph={<span className="inline-block h-[18px] w-[18px] la-notch bg-[var(--la-coin)]" />}
+          glyph={
+            <span
+              className="inline-block h-[17px] w-[17px] la-notch bg-[var(--la-coin)]"
+              style={{
+                boxShadow:
+                  'inset 0 0 0 2px var(--la-coin-ring), inset -3px -3px 0 rgba(200,140,10,.4)',
+              }}
+            />
+          }
           value={fmt(coins)}
           valueColor="var(--la-coin-text)"
         />
-        {/* Gems + Day/Bloom are freeplay chrome; puzzle mode shows only coins (mockup 1c). */}
-        {mode !== 'puzzle' && (
+        {/* Gems are freeplay chrome; puzzle mode shows only coins (mockup 1c). */}
+        {!isPuzzle && (
           <Chip
-            bg="#f5eeff"
-            line="#d3bff2"
+            bg="var(--la-gem-soft-bg)"
+            line="var(--la-gem-soft-line)"
+            bottomShade="rgba(90,60,150,.14)"
+            dropShadow="var(--la-gem-soft-shadow)"
             glyph={
-              <span className="inline-block h-4 w-4 rotate-45 bg-[var(--la-gem)] shadow-[inset_0_0_0_2px_#efe3ff]" />
+              <span
+                className="inline-block h-[13px] w-[13px] rotate-45 bg-[var(--la-gem)]"
+                style={{
+                  boxShadow:
+                    'inset 0 0 0 2px var(--la-gem-ring), inset -3px -3px 0 rgba(80,50,150,.35)',
+                }}
+              />
             }
             value={fmt(gems)}
             valueColor="var(--la-gem-text)"
+            valueSize="text-[17px]"
           />
         )}
       </div>
 
       {/* Day / Bloom / Energy + Sleep */}
-      <div className="pointer-events-auto flex items-start gap-2.5">
+      <div className="pointer-events-auto flex items-stretch gap-2">
         <div className="flex flex-col items-end gap-1.5">
-          {mode !== 'puzzle' && (
-            <div className="la-notch flex items-center gap-2 bg-[#fff2e4] px-3.5 py-2 shadow-[inset_0_0_0_3px_#f4cfa6]">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#cf8f5c]">
+          {!isPuzzle && (
+            <div
+              className="la-notch flex items-center gap-2 bg-[var(--la-day-bg)] px-3 py-1.5"
+              style={{
+                boxShadow:
+                  'inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(160,100,50,.14), inset 0 0 0 3px var(--la-day-line)',
+                filter: 'drop-shadow(0 4px 0 var(--la-day-shadow))',
+              }}
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--la-day-label)]">
                 Day
               </span>
-              <span className="font-pixel text-lg leading-none text-[#c46d38]">{day}</span>
-              <span className="h-3.5 w-0.5 bg-[#f0cfa8]" />
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[#c99a6e]">
+              <span className="font-pixel text-[17px] font-semibold leading-none text-[var(--la-orange)]">
+                {day}
+              </span>
+              <span className="h-[13px] w-0.5 bg-[var(--la-day-sep)]" />
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--la-label)]">
                 Bloom
               </span>
-              <span className="font-pixel text-sm text-[#c46d38]">{fmtBloom(bloom)}</span>
+              <span className="font-pixel text-[13px] leading-none text-[var(--la-orange)]">
+                {fmtBloom(bloom)}
+              </span>
             </div>
           )}
           <div className="la-notch la-chip-gold flex items-center gap-2 px-3 py-1.5">
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-              <path d="M8 1 L3 8 L7 8 L6 13 L11 6 L7 6 Z" fill="var(--la-energy)" />
+            <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden>
+              <path d="M8 1 L3 8 L7 8 L6 13 L11 6 L7 6 Z" fill="var(--la-energy-icon)" />
             </svg>
-            {/* Compact track in puzzle chrome (mockup 1c) so coins+energy+Sleep fit ≤370px. */}
+            {/* Freeplay track is responsive (clamp) so coins+energy+Sleep fit ≤370px;
+                the puzzle chrome uses a compact fixed track. */}
             <div
-              className="h-2.5 overflow-hidden bg-[var(--la-energy-track)] shadow-[inset_0_0_0_2px_var(--la-energy-track-line)]"
-              style={{ width: mode === 'puzzle' ? 76 : 120 }}
+              className="h-2.5 overflow-hidden bg-[var(--la-energy-track)] la-notch-3"
+              style={{
+                width: isPuzzle ? 76 : 'clamp(64px, 16vw, 110px)',
+                boxShadow: 'inset 0 0 0 2px var(--la-energy-track-line)',
+              }}
             >
               <div
                 className="h-full bg-[var(--la-energy)] transition-[width] duration-200"
-                style={{ width: `${energyPct}%` }}
+                style={{ width: `${energyPct}%`, boxShadow: 'inset 0 2px 0 rgba(255,255,255,.4)' }}
               />
             </div>
-            <span className="font-pixel text-sm font-semibold leading-none text-[var(--la-coin-text)]">
+            <span className="font-pixel text-[13px] font-semibold leading-none text-[var(--la-coin-text)]">
               {energy}/{maxEnergy}
             </span>
           </div>
@@ -131,7 +170,7 @@ export function Hud() {
           aria-label={
             armed ? 'Confirm — end the day and score now' : isEndDay ? 'End the day' : 'Sleep'
           }
-          className="la-notch la-btn-sleep la-anim flex w-[66px] flex-col items-center justify-center gap-0.5 px-1.5 py-2.5 font-pixel text-[13px] font-semibold active:translate-y-0.5 disabled:opacity-70"
+          className="la-notch la-btn-sleep la-anim flex w-16 flex-col items-center justify-center gap-0.5 px-1.5 font-pixel text-[13px] font-semibold active:translate-y-0.5 disabled:opacity-70"
           style={sleepStyle}
         >
           <svg width="24" height="24" viewBox="0 0 26 26" aria-hidden>
@@ -151,30 +190,33 @@ function Chip({
   value,
   valueColor,
   dropShadow,
+  bottomShade,
+  valueSize = 'text-xl',
 }: {
   bg: string;
   line: string;
   glyph: React.ReactNode;
   value: string;
   valueColor: string;
-  /** When set, adds the mockup's inset top-light + a hard drop-shadow one shade darker. */
-  dropShadow?: string;
+  /** Hard drop-shadow one shade darker (the sticker's raised edge). */
+  dropShadow: string;
+  /** Inner bottom-shade rgba (bevel under the top light). */
+  bottomShade: string;
+  valueSize?: string;
 }) {
   return (
     <div
-      className="la-notch flex items-center gap-2 py-2 pl-2.5 pr-4"
+      className="la-notch flex items-center gap-1.5 py-1.5 pl-2 pr-3"
       style={{
         background: bg,
-        boxShadow: dropShadow
-          ? `inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.16), inset 0 0 0 3px ${line}`
-          : `inset 0 0 0 3px ${line}`,
-        filter: dropShadow ? `drop-shadow(0 4px 0 ${dropShadow})` : undefined,
+        boxShadow: `inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 ${bottomShade}, inset 0 0 0 3px ${line}`,
+        filter: `drop-shadow(0 4px 0 ${dropShadow})`,
       }}
     >
       {glyph}
       <span
-        className="font-pixel text-xl font-semibold leading-none"
-        style={{ color: valueColor, minWidth: 44 }}
+        className={`font-pixel ${valueSize} font-semibold leading-none`}
+        style={{ color: valueColor, minWidth: 40 }}
       >
         {value}
       </span>
