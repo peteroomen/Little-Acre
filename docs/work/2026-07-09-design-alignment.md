@@ -21,12 +21,12 @@ store logic, WS-D's sleep guard / star pop / dusk badge / coins variant all surv
 ## Steps
 
 - [x] Commit design drop to `docs/design/mockups/` + roadmap the un-sliced surfaces
-- [ ] Restyle MainMenu + PuzzleSelect (1a/1b): title treatment, chunky buttons, total-star chip,
+- [x] Restyle MainMenu + PuzzleSelect (1a/1b): title treatment, chunky buttons, total-star chip,
       section headers, card anatomy (icon swatch · objective line · stars · "done in par!" tag ·
       locked state)
-- [ ] Restyle in-puzzle chrome + banners + result modal (1c/1d/1e) keeping WS-D features
-- [ ] Gates: lint / type-check / test / build; Playwright screenshots vs mockups
-- [ ] Integrate, push
+- [x] Restyle in-puzzle chrome + banners + result modal (1c/1d/1e) keeping WS-D features
+- [x] Gates: lint / type-check / test / build; Playwright screenshots vs mockups
+- [x] Integrate, push
 
 ## Manual test steps
 
@@ -47,10 +47,28 @@ backdrop, landscape reflow — all roadmapped under "Design Drop".
 
 ## What actually happened
 
+One Opus agent implemented both slices from the mockup HTML; orchestrator integrated. ~60 new
+`--la-*` surface tokens + shared treatments extracted once (`.la-notch-*`, sticker classes,
+`PixelStar`/`PixelStarRow` in `src/components/ui/pixel.tsx`); no raw hex in TSX — per-puzzle card
+swatches derive from `CROPS[crop].color`. All WS-D behaviours survived the reskin (sleep guard,
+star pop, dusk badge, coins variant). Deliberate deviations, per agent report: puzzle-mode HUD
+compacts to coins + energy + Sleep per mockup 1c (freeplay HUD unchanged — regression-checked);
+kept the in-voice win/lose titles over the mockup's generic "Puzzle clear!"; kept a quiet ✕ quit
+chip on the banner (only puzzle-exit affordance). Playwright screenshots of menu / select /
+Market Day banner / result modal / freeplay HUD taken at 370×800. Gates: lint / type-check /
+110 tests / build / harness 21.6s — all green.
+
 ## Files created / modified
+
+`src/app/globals.css` · `src/components/ui/pixel.tsx` (new) · `MainMenu.tsx` · `PuzzleSelect.tsx`
+· `PuzzleOverlays.tsx` · `Hud.tsx` · `docs/design/mockups/` (drop) · `docs/ROADMAP.md`
 
 ## Deferred to next session
 
+Everything under ROADMAP "Design Drop" (farm HUD, radial, store + Craft, Sunrise Report, menu
+board backdrop, fishing/mining overlays, token completion, landscape). Freeplay Sleep button
+clips slightly at 370px (pre-existing — fold into the farm-HUD restyle).
+
 ## Status
 
-- [x] In progress - [ ] Complete - [ ] Partial — see deferred
+- [ ] In progress - [x] Complete - [ ] Partial — see deferred
