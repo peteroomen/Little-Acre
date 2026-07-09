@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { fmt, fmtBloom } from '@/lib/game/numbers';
-import { getPuzzle } from '@/lib/game/puzzles';
+import { getPuzzle, objectiveTarget } from '@/lib/game/puzzles';
 import { useGameStore } from '@/lib/game/store';
 
 /** Top HUD: coin/gem counters (left) and Day · Bloom · Energy + Sleep (right). */
@@ -23,11 +23,15 @@ export function Hud() {
 
   const energyPct = Math.round((energy / maxEnergy) * 100);
 
-  // "Today only" (nightLimit 0) puzzles: sleeping instantly loses, so the Sleep button is
-  // subdued and asks for a confirming second tap within a few seconds. Guard is component-level
-  // state only — store.sleep is untouched, so deliberately sleeping (losing) stays possible.
+  // "Today only" (nightLimit 0) puzzles have no night to sleep through — the Sleep button becomes
+  // "End Day", which scores the run there and then. If the player hasn't reached the 1★ base yet,
+  // ending concedes with no stars, so it asks for a confirming second tap first (mirrors the old
+  // guard). Once the base is met, End Day is a plain winning tap. Guard is component-level state
+  // only — store.sleep is untouched.
   const guardDef = mode === 'puzzle' && puzzle ? getPuzzle(puzzle.id) : undefined;
-  const guardSleep = !!guardDef && guardDef.nightLimit === 0;
+  const isEndDay = !!guardDef && guardDef.nightLimit === 0;
+  const base = guardDef ? objectiveTarget(guardDef.objective) : 0;
+  const wouldConcede = isEndDay && (puzzle?.progress ?? 0) < base;
   const [armed, setArmed] = useState(false);
   const disarmRef = useRef<number | null>(null);
 
@@ -39,8 +43,8 @@ export function Hud() {
 
   const onSleep = () => {
     if (phase !== 'day') return;
-    if (guardSleep && !armed) {
-      toast(`Sleeping ends ${guardDef?.name ?? 'the day'}!`, 'bad');
+    if (wouldConcede && !armed) {
+      toast('Ending now scores no stars — tap again', 'bad');
       setArmed(true);
       if (disarmRef.current) window.clearTimeout(disarmRef.current);
       disarmRef.current = window.setTimeout(() => setArmed(false), 3000);
@@ -53,7 +57,7 @@ export function Hud() {
 
   const sleepStyle = armed
     ? { animation: 'la-pulse .5s 3' }
-    : guardSleep
+    : wouldConcede
       ? { opacity: 0.6, filter: 'saturate(.7)' }
       : sleepPulse
         ? { animation: 'la-pulse .5s 2' }
@@ -124,14 +128,16 @@ export function Hud() {
           key={sleepPulse}
           onClick={onSleep}
           disabled={phase !== 'day'}
-          aria-label={armed ? 'Confirm sleep — this ends the puzzle' : 'Sleep'}
+          aria-label={
+            armed ? 'Confirm — end the day and score now' : isEndDay ? 'End the day' : 'Sleep'
+          }
           className="la-notch la-btn-sleep la-anim flex w-[66px] flex-col items-center justify-center gap-0.5 px-1.5 py-2.5 font-pixel text-[13px] font-semibold active:translate-y-0.5 disabled:opacity-70"
           style={sleepStyle}
         >
           <svg width="24" height="24" viewBox="0 0 26 26" aria-hidden>
             <path d="M18 15 A7 7 0 1 1 11 6 A5.5 5.5 0 0 0 18 15 Z" fill="var(--la-sleep-text)" />
           </svg>
-          <span>{armed ? 'Sure?' : 'Sleep'}</span>
+          <span>{armed ? 'Sure?' : isEndDay ? 'End Day' : 'Sleep'}</span>
         </button>
       </div>
     </div>

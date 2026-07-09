@@ -6,6 +6,7 @@ import {
   actionsFor,
   radialHiFor,
   ringAngle,
+  uprootNeedsConfirm,
   type ActionCtx,
 } from './actions';
 import { type CropId, type Tile } from './tiles';
@@ -176,5 +177,28 @@ describe('radialHiFor', () => {
   it('handles wrap-around near the top for odd counts', () => {
     // 5 slices: index 0 sits at the top; a small left-of-up drag still snaps to it.
     expect(radialHiFor(5, -6, -RADIAL_RADIUS)).toBe(0);
+  });
+});
+
+describe('uprootNeedsConfirm', () => {
+  it('flags a growing crop past its first sprout', () => {
+    expect(uprootNeedsConfirm(tile({ crop: 'carrot', stage: 1 }))).toBe(true);
+  });
+  it('flags a ripe crop (stage > 0)', () => {
+    expect(uprootNeedsConfirm(tile({ crop: 'tomato', stage: 4 }))).toBe(true);
+  });
+  it('flags a re-yield vine that has already borne fruit (harvests > 0)', () => {
+    // A just-harvested vine drops back to stage 0 but harvests > 0 — still worth mourning.
+    expect(uprootNeedsConfirm(tile({ crop: 'tomato', stage: 0, harvests: 1 }))).toBe(true);
+  });
+  it('does NOT flag a fresh stage-0 planting (nothing invested overnight)', () => {
+    expect(uprootNeedsConfirm(tile({ crop: 'carrot', stage: 0, harvests: 0 }))).toBe(false);
+  });
+  it('does NOT flag a wilted crop (that is a Clear, not an Uproot)', () => {
+    expect(uprootNeedsConfirm(tile({ crop: 'carrot', stage: 2, wilted: true }))).toBe(false);
+  });
+  it('does NOT flag empty soil or non-crop tiles', () => {
+    expect(uprootNeedsConfirm(tile({ crop: null }))).toBe(false);
+    expect(uprootNeedsConfirm(tile({ kind: 'grass', crop: null }))).toBe(false);
   });
 });

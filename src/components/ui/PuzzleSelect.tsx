@@ -4,6 +4,7 @@ import {
   isPuzzleUnlocked,
   objectiveLabel,
   PUZZLES,
+  tierTargets,
   type PuzzleDef,
   type PuzzleSection,
 } from '@/lib/game/puzzles';
@@ -134,11 +135,10 @@ function PuzzleCard({
       </div>
       <div className="flex flex-none flex-col items-end gap-1.5">
         <PixelStarRow value={stars} />
-        {stars === 3 && (
-          <span className="font-pixel text-[11px] leading-none text-[var(--la-grow-deep)]">
-            done in par!
-          </span>
-        )}
+        {/* Goal ladder: the three tier targets (1★ / 2★ / 3★) so the stretch goals are visible. */}
+        <span className="font-pixel text-[11px] leading-none text-[var(--la-grow-deep)]">
+          {tierTargets(def).join(' · ')}
+        </span>
       </div>
     </button>
   );

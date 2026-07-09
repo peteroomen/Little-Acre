@@ -6,14 +6,17 @@ import {
   getPuzzle,
   initPuzzleState,
   isPuzzleUnlocked,
+  nextTier,
   objectiveLabel,
   objectiveMatches,
+  objectiveNoun,
   objectiveTarget,
   PUZZLES,
   registerEarned,
   registerHarvest,
   registerNight,
   starsFor,
+  tierTargets,
   type PuzzleDef,
   type PuzzleState,
 } from './puzzles';
@@ -56,11 +59,12 @@ describe('PUZZLES integrity', () => {
     expect(PUZZLES.slice(3).every((p) => p.section === 'challenge')).toBe(true);
   });
 
-  it('orders star thresholds three <= two <= nightLimit with positive targets/energy', () => {
+  it('orders goal tiers strictly base < two < three with positive targets/energy', () => {
     for (const p of PUZZLES) {
-      expect(p.stars.three).toBeLessThanOrEqual(p.stars.two);
-      expect(p.stars.two).toBeLessThanOrEqual(p.nightLimit);
-      expect(objectiveTarget(p.objective)).toBeGreaterThan(0);
+      const base = objectiveTarget(p.objective);
+      expect(base).toBeGreaterThan(0);
+      expect(base).toBeLessThan(p.stars.two);
+      expect(p.stars.two).toBeLessThan(p.stars.three);
       expect(p.startEnergy).toBeGreaterThan(0);
     }
   });
@@ -160,6 +164,7 @@ describe('boardFrom (rich board authoring)', () => {
   });
 });
 
+// base = 3 (objective count); goal tiers two:5, three:8.
 const DEF: PuzzleDef = {
   id: 'test',
   name: 'Test',
@@ -167,35 +172,61 @@ const DEF: PuzzleDef = {
   blurb: '',
   objective: { kind: 'harvest', crop: 'carrot', count: 3 },
   nightLimit: 4,
-  stars: { three: 2, two: 3 },
+  stars: { two: 5, three: 8 },
   startCoins: 30,
   startEnergy: 16,
   builds: ['carrot'],
   makeBoard: () => [],
 };
 
+// base = 50 (objective amount); goal tiers two:70, three:100.
 const COIN_DEF: PuzzleDef = {
   ...DEF,
   id: 'test-coins',
   objective: { kind: 'coins', amount: 50 },
+  stars: { two: 70, three: 100 },
 };
 
-describe('starsFor', () => {
-  it('3★ at or under the three-star threshold', () => {
-    expect(starsFor(DEF, 0)).toBe(3);
-    expect(starsFor(DEF, 2)).toBe(3); // boundary
+describe('starsFor (goal-tier progress)', () => {
+  it('0 below the 1★ base', () => {
+    expect(starsFor(DEF, 0)).toBe(0);
+    expect(starsFor(DEF, 2)).toBe(0);
   });
-  it('2★ between three and two thresholds', () => {
-    expect(starsFor(DEF, 3)).toBe(2); // boundary
-  });
-  it('1★ past the two threshold (completed within the limit)', () => {
+  it('1★ from base up to the 2★ target', () => {
+    expect(starsFor(DEF, 3)).toBe(1); // base boundary
     expect(starsFor(DEF, 4)).toBe(1);
-    expect(starsFor(DEF, 99)).toBe(1);
   });
-  it('a 0-night puzzle with stars {0,0} scores 3★ on a same-day win', () => {
-    const zeroDay: PuzzleDef = { ...DEF, nightLimit: 0, stars: { three: 0, two: 0 } };
-    expect(starsFor(zeroDay, 0)).toBe(3);
-    expect(starsFor(zeroDay, 1)).toBe(1);
+  it('2★ from the 2★ target up to the 3★ target', () => {
+    expect(starsFor(DEF, 5)).toBe(2); // two boundary
+    expect(starsFor(DEF, 7)).toBe(2);
+  });
+  it('3★ at or beyond the 3★ target', () => {
+    expect(starsFor(DEF, 8)).toBe(3); // three boundary
+    expect(starsFor(DEF, 99)).toBe(3);
+  });
+  it('reads coin progress on the same tiers', () => {
+    expect(starsFor(COIN_DEF, 49)).toBe(0);
+    expect(starsFor(COIN_DEF, 50)).toBe(1);
+    expect(starsFor(COIN_DEF, 70)).toBe(2);
+    expect(starsFor(COIN_DEF, 100)).toBe(3);
+  });
+});
+
+describe('tier helpers', () => {
+  it('objectiveNoun gives the bare metric noun', () => {
+    expect(objectiveNoun(DEF.objective)).toBe('Carrots');
+    expect(objectiveNoun({ kind: 'harvest', crop: 'any', count: 4 })).toBe('Crops');
+    expect(objectiveNoun({ kind: 'coins', amount: 50 })).toBe('Coins');
+  });
+  it('tierTargets lists [base, two, three] ascending', () => {
+    expect(tierTargets(DEF)).toEqual([3, 5, 8]);
+    expect(tierTargets(COIN_DEF)).toEqual([50, 70, 100]);
+  });
+  it('nextTier climbs from base → two → three, then pins at three', () => {
+    expect(nextTier(DEF, 0)).toEqual({ stars: 1, target: 3 });
+    expect(nextTier(DEF, 3)).toEqual({ stars: 2, target: 5 });
+    expect(nextTier(DEF, 5)).toEqual({ stars: 3, target: 8 });
+    expect(nextTier(DEF, 8)).toEqual({ stars: 3, target: 8 });
   });
 });
 
@@ -211,14 +242,18 @@ describe('objectiveMatches', () => {
 });
 
 describe('registerHarvest', () => {
-  it('increments progress on a matching crop and wins at the count', () => {
+  it('increments progress on a matching crop and stays playing below the 3★ target', () => {
     let s = initPuzzleState();
     s = registerHarvest(DEF, s, 'carrot');
     expect(s).toMatchObject({ progress: 1, status: 'playing' });
     s = registerHarvest(DEF, s, 'carrot');
-    expect(s).toMatchObject({ progress: 2, status: 'playing' });
-    s = registerHarvest(DEF, s, 'carrot');
-    expect(s).toMatchObject({ progress: 3, status: 'won' });
+    s = registerHarvest(DEF, s, 'carrot'); // progress 3 = base (1★) but NOT a win yet
+    expect(s).toMatchObject({ progress: 3, status: 'playing' });
+  });
+
+  it('wins instantly the moment the 3★ target is cleared', () => {
+    const s = registerHarvest(DEF, { progress: 7, nightsUsed: 1, status: 'playing' }, 'carrot');
+    expect(s).toMatchObject({ progress: 8, status: 'won' });
   });
 
   it('ignores non-matching crops', () => {
@@ -232,7 +267,7 @@ describe('registerHarvest', () => {
   });
 
   it('is a no-op once the puzzle is over', () => {
-    const won = { progress: 3, nightsUsed: 2, status: 'won' as const };
+    const won = { progress: 8, nightsUsed: 2, status: 'won' as const };
     expect(registerHarvest(DEF, won, 'carrot')).toBe(won);
   });
 
@@ -244,19 +279,17 @@ describe('registerHarvest', () => {
 });
 
 describe('registerEarned', () => {
-  it('accumulates earned coins and wins at the amount', () => {
+  it('accumulates earned coins and stays playing below the 3★ target', () => {
     let s = initPuzzleState();
     s = registerEarned(COIN_DEF, s, 20);
     expect(s).toMatchObject({ progress: 20, status: 'playing' });
-    s = registerEarned(COIN_DEF, s, 18);
-    expect(s).toMatchObject({ progress: 38, status: 'playing' });
-    s = registerEarned(COIN_DEF, s, 13);
-    expect(s).toMatchObject({ progress: 51, status: 'won' });
+    s = registerEarned(COIN_DEF, s, 55); // progress 75 (past 2★ 70, below 3★ 100)
+    expect(s).toMatchObject({ progress: 75, status: 'playing' });
   });
 
-  it('wins exactly at the target amount', () => {
-    const s = registerEarned(COIN_DEF, { progress: 30, nightsUsed: 1, status: 'playing' }, 20);
-    expect(s).toMatchObject({ progress: 50, status: 'won' });
+  it('wins the moment the 3★ target is cleared', () => {
+    const s = registerEarned(COIN_DEF, { progress: 90, nightsUsed: 1, status: 'playing' }, 20);
+    expect(s).toMatchObject({ progress: 110, status: 'won' });
   });
 
   it('only ever adds — spending cannot reduce progress (non-positive amounts are no-ops)', () => {
@@ -282,8 +315,8 @@ describe('registerEarned', () => {
   });
 });
 
-describe('registerNight', () => {
-  it('counts nights and stays playing within the limit', () => {
+describe('registerNight (deadline scoring)', () => {
+  it('counts nights and stays playing before the deadline', () => {
     let s = initPuzzleState();
     s = registerNight(DEF, s);
     expect(s).toMatchObject({ nightsUsed: 1, status: 'playing' });
@@ -293,26 +326,33 @@ describe('registerNight', () => {
     expect(s).toMatchObject({ nightsUsed: 4, status: 'playing' }); // == nightLimit, still ok
   });
 
-  it('loses when the night count exceeds the limit', () => {
-    let s: PuzzleState = { progress: 1, nightsUsed: 4, status: 'playing' };
-    s = registerNight(DEF, s);
+  it('at the deadline, scores a win when progress cleared the base', () => {
+    // progress 4 = 1★ tier; the deadline (nightsUsed 5 > limit 4) settles it as a win.
+    const s = registerNight(DEF, { progress: 4, nightsUsed: 4, status: 'playing' });
+    expect(s).toMatchObject({ nightsUsed: 5, status: 'won' });
+  });
+
+  it('at the deadline, scores a win at whatever tier progress reached (2★ here)', () => {
+    const s = registerNight(DEF, { progress: 6, nightsUsed: 4, status: 'playing' });
+    expect(s).toMatchObject({ nightsUsed: 5, status: 'won' });
+    expect(starsFor(DEF, s.progress)).toBe(2);
+  });
+
+  it('loses at the deadline when progress is below the base', () => {
+    const s = registerNight(DEF, { progress: 2, nightsUsed: 4, status: 'playing' });
     expect(s).toMatchObject({ nightsUsed: 5, status: 'lost' });
   });
 
-  it('nightLimit 0 ("today only"): the first sleep without a win loses', () => {
-    const zeroDay: PuzzleDef = { ...DEF, nightLimit: 0, stars: { three: 0, two: 0 } };
-    const s = registerNight(zeroDay, initPuzzleState());
-    expect(s).toMatchObject({ nightsUsed: 1, status: 'lost' });
+  it('nightLimit 0 ("End Day"): scores immediately — base met ⇒ win', () => {
+    const zeroDay: PuzzleDef = { ...DEF, nightLimit: 0 };
+    const win = registerNight(zeroDay, { progress: 3, nightsUsed: 0, status: 'playing' });
+    expect(win).toMatchObject({ nightsUsed: 1, status: 'won' });
+    const loss = registerNight(zeroDay, initPuzzleState());
+    expect(loss).toMatchObject({ nightsUsed: 1, status: 'lost' });
   });
 
-  it('nightLimit 0: a win during the day is not overwritten by the night', () => {
-    const zeroDay: PuzzleDef = { ...DEF, nightLimit: 0, stars: { three: 0, two: 0 } };
-    const won = { progress: 3, nightsUsed: 0, status: 'won' as const };
-    expect(registerNight(zeroDay, won)).toBe(won);
-  });
-
-  it('does not overwrite a win reached on the final day', () => {
-    const won = { progress: 3, nightsUsed: 2, status: 'won' as const };
+  it('does not overwrite an instant 3★ win reached during the day', () => {
+    const won = { progress: 8, nightsUsed: 2, status: 'won' as const };
     expect(registerNight(DEF, won)).toBe(won);
   });
 });
@@ -341,24 +381,28 @@ describe('isPuzzleUnlocked', () => {
 });
 
 /**
- * Feasibility guard: 3★ thresholds must equal the exact-solver optimal (par = optimal), so a
- * threshold typo can't silently make a puzzle trivial or impossible. The authoritative check is
- * scripts/check-puzzle-pars.mjs (run it after any def change); these pins mirror its results.
+ * Goal-tier guard: pin every puzzle's [base, 2★, 3★] progress ladder. 3★ is the exact
+ * solver-proven maximum within the night limit — the authoritative check is
+ * scripts/check-puzzle-pars.mjs (run it after any def change); these pins mirror its results so a
+ * threshold typo can't silently make a tier trivial, impossible, or out of order.
  */
-describe('3★ pars match solver-verified optimal nights', () => {
-  const PARS: Record<string, number> = {
-    'first-sprout': 2,
-    'dry-spell': 3,
-    'vine-and-again': 5,
-    'market-day': 0,
-    'the-patient-vine': 4,
-    'seed-money': 5,
-    'thirsty-work': 7,
-    waterworks: 2,
+describe('goal-tier ladders match the solver-verified maxima', () => {
+  const LADDERS: Record<string, [number, number, number]> = {
+    'first-sprout': [3, 6, 9],
+    'dry-spell': [4, 5, 6],
+    'vine-and-again': [4, 6, 8],
+    'market-day': [2, 3, 4],
+    'the-patient-vine': [2, 3, 4],
+    'seed-money': [3, 5, 6],
+    'thirsty-work': [12, 17, 22],
+    waterworks: [4, 6, 9],
   };
-  for (const [id, par] of Object.entries(PARS)) {
-    it(`${id}: ${par} night${par === 1 ? '' : 's'}`, () => {
-      expect(getPuzzle(id)!.stars.three).toBe(par);
+  for (const [id, [base, two, three]] of Object.entries(LADDERS)) {
+    it(`${id}: ${base} / ${two} / ${three}`, () => {
+      const def = getPuzzle(id)!;
+      expect(objectiveTarget(def.objective)).toBe(base);
+      expect(def.stars.two).toBe(two);
+      expect(def.stars.three).toBe(three);
     });
   }
 });
