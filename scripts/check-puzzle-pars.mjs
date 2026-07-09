@@ -74,10 +74,10 @@ const SHIPPED = [
     objective: { kind: 'harvest', crop: 'tomato', count: 4 },
     nightLimit: 9,
     allowFeed: false,
-    srcStars: { three: 6, two: 7 },
     // Tomato retune (reyield 4 / regrow 1) shortens the optimal line: coins 40 afford only 3
     // vines (3×12c), so par is 4 watered nights to first ripe + 1 regrow night for the 4th
-    // fruit = 5. Integration must apply these to src/lib/game/puzzles.ts.
+    // fruit = 5. Applied to src/lib/game/puzzles.ts at Wave-1 integration.
+    srcStars: { three: 5, two: 6 },
     stars: { three: 5, two: 6 },
   },
 ];

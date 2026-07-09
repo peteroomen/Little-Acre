@@ -112,7 +112,10 @@ export const PUZZLES: PuzzleDef[] = [
       'A Tomato keeps producing. Plant it once and harvest the same vine again and again — no replanting needed.',
     objective: { kind: 'harvest', crop: 'tomato', count: 4 },
     nightLimit: 9,
-    stars: { three: 6, two: 7 },
+    // Retuned tomato (reyield 4 / regrow 1) shortens the optimal line: 40c affords 3 vines, so
+    // par = 4 watered nights to first ripe + 1 regrow night for the 4th fruit = 5 (solver-locked;
+    // see scripts/check-puzzle-pars.mjs).
+    stars: { three: 5, two: 6 },
     startCoins: 40,
     startEnergy: 16,
     builds: ['tomato'],

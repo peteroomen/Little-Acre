@@ -191,7 +191,7 @@ describe('tutorial 3★ pars match optimal-play nights', () => {
   it('dry-spell: potato 3 nights', () => {
     expect(getPuzzle('dry-spell')!.stars.three).toBe(3);
   });
-  it('vine-and-again: tomato 4 + regrow 2 = 6 nights', () => {
-    expect(getPuzzle('vine-and-again')!.stars.three).toBe(6);
+  it('vine-and-again: tomato grow 4, then regrow-1 fruit chains = 5 nights', () => {
+    expect(getPuzzle('vine-and-again')!.stars.three).toBe(5);
   });
 });
