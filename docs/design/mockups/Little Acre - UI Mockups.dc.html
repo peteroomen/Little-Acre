@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: 'Fredoka', system-ui, sans-serif; -webkit-font-smoothing: antialiased; background: #efe6d2; }
+    a { color: #7cae4f; text-decoration: none; }
+    a:hover { color: #5f9a3e; }
+    @keyframes ms-pop { 0% { transform: scale(0); } 70% { transform: scale(1.3); } 100% { transform: scale(1); } }
+    @keyframes ms-marker { 0% { left: 3%; } 50% { left: 91%; } 100% { left: 3%; } }
+    @keyframes ms-bobber { 0%, 55%, 100% { transform: translateY(0); } 65%, 80% { transform: translateY(8px); } }
+    @keyframes ms-ring { 0% { transform: scale(.7); opacity: .9; } 100% { transform: scale(1.5); opacity: 0; } }
+    @keyframes ms-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; } }
+  </style>
+</helmet>
+
+<section style="padding:44px 48px 72px; display:flex; flex-direction:column; gap:26px;">
+  <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;">
+    <span style="font-family:'Pixelify Sans',monospace; font-size:26px; font-weight:600; color:#5a462f;">Little Acre — UI surfaces</span>
+    <span style="font-size:13px; color:#8a7455;">Puzzle framing · minigame overlays · visual system. The main screen, radial menu, sprinkler coverage, Store &amp; Sunrise Report are live in <a href="Little Acre.dc.html" style="font-weight:600;">Little Acre.dc.html</a>.</span>
+  </div>
+
+  <div style="display:flex; gap:30px; flex-wrap:wrap; align-items:flex-start;">
+
+    <!-- ============ 1a MAIN MENU ============ -->
+    <div id="1a" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <a href="#1a" style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; background:#5a462f; color:#fdf3e0; padding:3px 9px;">1a</a>
+        <span style="font-size:13px; font-weight:600; color:#5a462f;">Main menu</span>
+      </div>
+      <div data-screen-label="Main Menu" style="background:#fdf3e0; padding:10px; box-shadow:inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 8px 0 #dcc39a) drop-shadow(0 16px 24px rgba(120,85,25,.25)); clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px));">
+        <div style="width:370px; height:760px; position:relative; overflow:hidden; background:linear-gradient(#d8edf2 0%, #e7f2e4 48%, #fbeecb 100%);">
+          <div style="position:absolute; left:0; right:0; bottom:-30px; height:58%;">
+            <x-import component-from-global-scope="farm-board" from="./farm-board.js" style="position:absolute; inset:0;" preset="menu" cy="0.5" hint-size="100%,100%"></x-import>
+          </div>
+          <div style="position:absolute; top:96px; left:0; right:0; text-align:center;">
+            <div style="font-size:12px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#c99a6e;">a cozy little farm</div>
+            <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-top:6px;">
+              <span style="width:14px; height:14px; background:#f2a9c4; clip-path:polygon(0 4px,4px 4px,4px 0,10px 0,10px 4px,14px 4px,14px 10px,10px 10px,10px 14px,4px 14px,4px 10px,0 10px);"></span>
+              <span style="font-family:'Pixelify Sans',monospace; font-size:46px; font-weight:700; color:#6b5236; text-shadow:0 4px 0 #ecc98a; line-height:1;">Little Acre</span>
+              <span style="width:14px; height:14px; background:#c9a6ff; clip-path:polygon(0 4px,4px 4px,4px 0,10px 0,10px 4px,14px 4px,14px 10px,10px 10px,10px 14px,4px 14px,4px 10px,0 10px);"></span>
+            </div>
+          </div>
+          <div style="position:absolute; top:250px; left:0; right:0; display:flex; flex-direction:column; align-items:center; gap:14px;">
+            <button style="width:230px; padding:16px; border:none; cursor:pointer; background:#aadd85; color:#3a5c1f; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:20px; box-shadow:inset 0 3px 0 rgba(255,255,255,.45), inset 0 -6px 0 rgba(40,80,20,.28), inset 0 0 0 3px #bfe89b; filter:drop-shadow(0 6px 0 #7fb35c) drop-shadow(0 10px 8px rgba(60,90,30,.22)); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));">Freeplay</button>
+            <button style="width:230px; padding:16px; border:none; cursor:pointer; background:#ffd79b; color:#7a4a12; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:20px; box-shadow:inset 0 3px 0 rgba(255,255,255,.55), inset 0 -6px 0 rgba(150,100,20,.26), inset 0 0 0 3px #ffe6bd; filter:drop-shadow(0 6px 0 #e6ac5e) drop-shadow(0 10px 8px rgba(150,100,20,.2)); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));">Puzzles</button>
+            <button style="width:230px; padding:13px; border:none; cursor:default; background:rgba(253,243,224,.8); color:#b0996f; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:15px; box-shadow:inset 0 0 0 3px #e7d6b4; clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">Settings · soon</button>
+          </div>
+          <div style="position:absolute; bottom:14px; left:0; right:0; text-align:center; font-size:11px; color:#b39c78;">day one of many</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 1b PUZZLE SELECT ============ -->
+    <div id="1b" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <a href="#1b" style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; background:#5a462f; color:#fdf3e0; padding:3px 9px;">1b</a>
+        <span style="font-size:13px; font-weight:600; color:#5a462f;">Puzzle select — tutorials · challenges · stars · locks</span>
+      </div>
+      <div data-screen-label="Puzzle Select" style="background:#fdf3e0; padding:10px; box-shadow:inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 8px 0 #dcc39a) drop-shadow(0 16px 24px rgba(120,85,25,.25)); clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px));">
+        <div style="width:370px; height:760px; position:relative; overflow:hidden; background:linear-gradient(#d8edf2 0%, #e7f2e4 60%, #fbeecb 100%); padding:14px; display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button style="width:38px; height:38px; border:none; cursor:pointer; background:#fff7ea; color:#a0895f; font-family:'Pixelify Sans',monospace; font-size:18px; box-shadow:inset 0 0 0 3px #f3d698; filter:drop-shadow(0 3px 0 #ecc98a); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">‹</button>
+            <span style="font-family:'Pixelify Sans',monospace; font-size:24px; font-weight:600; color:#6b5236;">Puzzles</span>
+            <span style="margin-left:auto; font-family:'Pixelify Sans',monospace; font-size:13px; color:#c08a1e; background:#fff3d6; padding:4px 10px; box-shadow:inset 0 0 0 2px #f3d698;">★ 6 / 18</span>
+          </div>
+
+          <div style="font-family:'Pixelify Sans',monospace; font-size:12px; letter-spacing:1.4px; text-transform:uppercase; color:#c99a6e; margin-top:4px;">Tutorials</div>
+
+          <div style="display:flex; align-items:center; gap:11px; background:#fffaf0; padding:12px; box-shadow:inset 0 0 0 3px #f0e0c4; filter:drop-shadow(0 4px 0 #e8d5b2); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+            <span style="width:38px; height:38px; flex:none; background:#f0894a; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));"></span>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; font-size:14px; color:#5a462f;">First Sprout</div>
+              <div style="font-size:12px; color:#a08862;">Harvest 1 Carrot · 3 nights</div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+              <div style="display:flex; gap:3px;">
+                <span style="width:16px; height:16px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+                <span style="width:16px; height:16px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+                <span style="width:16px; height:16px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+              </div>
+              <span style="font-family:'Pixelify Sans',monospace; font-size:11px; color:#7cae4f;">done in par!</span>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:11px; background:#fffaf0; padding:12px; box-shadow:inset 0 0 0 3px #f0e0c4; filter:drop-shadow(0 4px 0 #e8d5b2); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+            <span style="width:38px; height:38px; flex:none; background:#6cc3de; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));"></span>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; font-size:14px; color:#5a462f;">Water Wisely</div>
+              <div style="font-size:12px; color:#a08862;">Harvest 2 Wheat · 2 nights</div>
+            </div>
+            <div style="display:flex; gap:3px;">
+              <span style="width:16px; height:16px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+              <span style="width:16px; height:16px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+              <span style="width:16px; height:16px; background:#e4d7ba; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:11px; background:#fffaf0; padding:12px; box-shadow:inset 0 0 0 3px #f0e0c4; filter:drop-shadow(0 4px 0 #e8d5b2); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+            <span style="width:38px; height:38px; flex:none; background:#ffbe66; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));"></span>
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:7px;">
+                <span style="font-weight:600; font-size:14px; color:#5a462f;">Feed the Need</span>
+                <span style="font-family:'Pixelify Sans',monospace; font-size:10px; color:#3a5c1f; background:#cdeab0; padding:1px 6px;">New!</span>
+              </div>
+              <div style="font-size:12px; color:#a08862;">Harvest 1 Tomato · 1 night</div>
+            </div>
+            <div style="display:flex; gap:3px;">
+              <span style="width:16px; height:16px; background:#e4d7ba; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+              <span style="width:16px; height:16px; background:#e4d7ba; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+              <span style="width:16px; height:16px; background:#e4d7ba; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+            </div>
+          </div>
+
+          <div style="font-family:'Pixelify Sans',monospace; font-size:12px; letter-spacing:1.4px; text-transform:uppercase; color:#c99a6e; margin-top:6px;">Challenges</div>
+
+          <div style="display:flex; align-items:center; gap:11px; background:#fffaf0; padding:12px; box-shadow:inset 0 0 0 3px #f0e0c4; filter:drop-shadow(0 4px 0 #e8d5b2); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+            <span style="width:38px; height:38px; flex:none; background:#f7c948; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));"></span>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; font-size:14px; color:#5a462f;">Market Day</div>
+              <div style="font-size:12px; color:#a08862;">Earn 120c · 4 nights</div>
+            </div>
+            <div style="display:flex; gap:3px;">
+              <span style="width:16px; height:16px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+              <span style="width:16px; height:16px; background:#e4d7ba; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+              <span style="width:16px; height:16px; background:#e4d7ba; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:11px; background:#fffaf0; padding:12px; box-shadow:inset 0 0 0 3px #f0e0c4; filter:drop-shadow(0 4px 0 #e8d5b2); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+            <span style="width:38px; height:38px; flex:none; background:#6d5ca8; box-shadow:inset 0 -4px 0 rgba(0,0,0,.2), inset 0 0 0 2px rgba(255,255,255,.3); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));"></span>
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:7px;">
+                <span style="font-weight:600; font-size:14px; color:#5a462f;">Dusk Dash</span>
+                <span style="font-family:'Pixelify Sans',monospace; font-size:10px; color:#6a4bb0; background:#efe4ff; padding:1px 6px;">Today only</span>
+              </div>
+              <div style="font-size:12px; color:#a08862;">Harvest 3 crops before dusk · 0 nights</div>
+            </div>
+            <div style="display:flex; gap:3px;">
+              <span style="width:16px; height:16px; background:#e4d7ba; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+              <span style="width:16px; height:16px; background:#e4d7ba; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+              <span style="width:16px; height:16px; background:#e4d7ba; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:11px; background:#f3ecdb; padding:12px; opacity:.65; box-shadow:inset 0 0 0 3px #e4d7ba; clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+            <span style="width:38px; height:38px; flex:none; background:#c8bda4; display:flex; align-items:center; justify-content:center; clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));">
+              <span style="width:12px; height:9px; background:#8a7a5c; box-shadow:0 -4px 0 -1px #8a7a5c;"></span>
+            </span>
+            <div style="flex:1; min-width:0;">
+              <div style="font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; color:#a29775;">? ? ?</div>
+              <div style="font-size:12px; color:#b3a482;">Clear "Dusk Dash" to unlock</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 1c IN-PUZZLE CHROME ============ -->
+    <div id="1c" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <a href="#1c" style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; background:#5a462f; color:#fdf3e0; padding:3px 9px;">1c</a>
+        <span style="font-size:13px; font-weight:600; color:#5a462f;">In-puzzle chrome — objective banner over the board</span>
+      </div>
+      <div data-screen-label="In-Puzzle" style="background:#fdf3e0; padding:10px; box-shadow:inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 8px 0 #dcc39a) drop-shadow(0 16px 24px rgba(120,85,25,.25)); clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px));">
+        <div style="width:370px; height:760px; position:relative; overflow:hidden; background:linear-gradient(#d8edf2 0%, #e7f2e4 48%, #fbeecb 100%);">
+          <div style="position:absolute; inset:0;">
+            <x-import component-from-global-scope="farm-board" from="./farm-board.js" style="position:absolute; inset:0;" preset="tomato" cy="0.56" hint-size="100%,100%"></x-import>
+          </div>
+          <div style="position:absolute; top:0; left:0; right:0; padding:12px 12px 0; display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
+            <div style="display:flex; align-items:center; gap:7px; background:#fff7ea; padding:7px 12px 7px 9px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.16), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+              <span style="width:16px; height:16px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+              <span style="font-family:'Pixelify Sans',monospace; font-size:18px; font-weight:600; color:#c08a1e;">64</span>
+            </div>
+            <div style="display:flex; align-items:stretch; gap:7px;">
+              <div style="display:flex; align-items:center; gap:6px; background:#fff7ea; padding:6px 10px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.14), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+                <svg width="12" height="12" viewBox="0 0 14 14"><path d="M8 1 L3 8 L7 8 L6 13 L11 6 L7 6 Z" fill="#f5a623"></path></svg>
+                <div style="width:56px; height:9px; background:#f6e2c6; box-shadow:inset 0 0 0 2px #edcb9e; overflow:hidden;"><div style="width:60%; height:100%; background:#f5b23c;"></div></div>
+                <span style="font-family:'Pixelify Sans',monospace; font-size:12px; font-weight:600; color:#c08a1e;">6/10</span>
+              </div>
+              <button style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; width:52px; border:none; cursor:pointer; background:#6d5ca8; color:#fff0b8; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:11px; box-shadow:inset 0 3px 0 rgba(255,255,255,.3), inset 0 -5px 0 rgba(30,20,60,.42), inset 0 0 0 3px #8574c0; filter:drop-shadow(0 5px 0 #463880); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+                <svg width="17" height="17" viewBox="0 0 26 26"><path d="M18 15 A7 7 0 1 1 11 6 A5.5 5.5 0 0 0 18 15 Z" fill="#fff0b8"></path></svg>
+                <span>Sleep</span>
+              </button>
+            </div>
+          </div>
+          <div style="position:absolute; top:66px; left:0; right:0; display:flex; justify-content:center; padding:0 12px;">
+            <div style="display:flex; align-items:center; gap:9px; background:#fffaf0; padding:9px 13px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.14), inset 0 0 0 3px #f0e0c4; filter:drop-shadow(0 4px 0 #e8d5b2) drop-shadow(0 7px 6px rgba(150,110,30,.16)); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+              <span style="width:20px; height:20px; flex:none; background:#ef6a4e; box-shadow:inset 0 -3px 0 rgba(0,0,0,.16), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 4px,4px 4px,4px 0,16px 0,16px 4px,20px 4px,20px 16px,16px 16px,16px 20px,4px 20px,4px 16px,0 16px);"></span>
+              <div>
+                <div style="font-weight:600; font-size:13px; color:#5a462f; line-height:1.2;">Harvest 4 Tomatoes</div>
+                <div style="display:flex; align-items:center; gap:6px; margin-top:3px;">
+                  <div style="width:110px; height:8px; background:#f6e9d2; box-shadow:inset 0 0 0 2px #e8d5b2; overflow:hidden;"><div style="width:50%; height:100%; background:#aadd85; box-shadow:inset 0 2px 0 rgba(255,255,255,.4);"></div></div>
+                  <span style="font-family:'Pixelify Sans',monospace; font-size:12px; color:#7cae4f;">2/4</span>
+                </div>
+              </div>
+              <span style="width:2px; height:26px; background:#f0e0c4;"></span>
+              <div style="text-align:center;">
+                <div style="font-size:9px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:#c99a6e;">Night</div>
+                <div style="font-family:'Pixelify Sans',monospace; font-size:16px; font-weight:600; color:#c46d38; line-height:1;">2/9</div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute; left:0; right:0; bottom:0; padding:12px; display:flex; justify-content:center;">
+            <button style="display:flex; align-items:center; gap:8px; padding:12px 24px; border:none; cursor:pointer; background:#aadd85; color:#3a5c1f; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:15px; box-shadow:inset 0 3px 0 rgba(255,255,255,.45), inset 0 -6px 0 rgba(40,80,20,.28), inset 0 0 0 3px #bfe89b; filter:drop-shadow(0 5px 0 #7fb35c); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">Store</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 1d BANNER VARIANTS ============ -->
+    <div id="1d" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <a href="#1d" style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; background:#5a462f; color:#fdf3e0; padding:3px 9px;">1d</a>
+        <span style="font-size:13px; font-weight:600; color:#5a462f;">Objective banner variants</span>
+      </div>
+      <div style="width:410px; background:#fdf3e0; padding:22px 20px; display:flex; flex-direction:column; gap:18px; box-shadow:inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 8px 0 #dcc39a) drop-shadow(0 16px 24px rgba(120,85,25,.25)); clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px));">
+
+        <div style="display:flex; flex-direction:column; gap:7px;">
+          <span style="font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#c99a6e;">Harvest</span>
+          <div style="display:flex; align-items:center; gap:9px; background:#fffaf0; padding:9px 13px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 0 0 3px #f0e0c4; filter:drop-shadow(0 4px 0 #e8d5b2); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+            <span style="width:20px; height:20px; flex:none; background:#ef6a4e; box-shadow:inset 0 -3px 0 rgba(0,0,0,.16), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 4px,4px 4px,4px 0,16px 0,16px 4px,20px 4px,20px 16px,16px 16px,16px 20px,4px 20px,4px 16px,0 16px);"></span>
+            <div style="flex:1;">
+              <div style="font-weight:600; font-size:13px; color:#5a462f;">Harvest 4 Tomatoes</div>
+              <div style="display:flex; align-items:center; gap:6px; margin-top:3px;">
+                <div style="flex:1; height:8px; background:#f6e9d2; box-shadow:inset 0 0 0 2px #e8d5b2; overflow:hidden;"><div style="width:50%; height:100%; background:#aadd85;"></div></div>
+                <span style="font-family:'Pixelify Sans',monospace; font-size:12px; color:#7cae4f;">2/4</span>
+              </div>
+            </div>
+            <span style="width:2px; height:26px; background:#f0e0c4;"></span>
+            <div style="text-align:center;">
+              <div style="font-size:9px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:#c99a6e;">Night</div>
+              <div style="font-family:'Pixelify Sans',monospace; font-size:16px; font-weight:600; color:#c46d38; line-height:1;">2/9</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:7px;">
+          <span style="font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#c99a6e;">Coins — last night turns amber</span>
+          <div style="display:flex; align-items:center; gap:9px; background:#fffaf0; padding:9px 13px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 0 0 3px #f0e0c4; filter:drop-shadow(0 4px 0 #e8d5b2); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+            <span style="width:20px; height:20px; flex:none; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0; clip-path:polygon(0 6px,6px 6px,6px 0,14px 0,14px 6px,20px 6px,20px 14px,14px 14px,14px 20px,6px 20px,6px 14px,0 14px);"></span>
+            <div style="flex:1;">
+              <div style="font-weight:600; font-size:13px; color:#5a462f;">Earn 120c</div>
+              <div style="display:flex; align-items:center; gap:6px; margin-top:3px;">
+                <div style="flex:1; height:8px; background:#f6e9d2; box-shadow:inset 0 0 0 2px #e8d5b2; overflow:hidden;"><div style="width:67%; height:100%; background:#f7c948;"></div></div>
+                <span style="font-family:'Pixelify Sans',monospace; font-size:12px; color:#c08a1e;">80/120</span>
+              </div>
+            </div>
+            <span style="width:2px; height:26px; background:#f0e0c4;"></span>
+            <div style="text-align:center; background:#fdeee4; padding:3px 7px; box-shadow:inset 0 0 0 2px #f2cdb4;">
+              <div style="font-size:9px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:#d07a52;">Night</div>
+              <div style="font-family:'Pixelify Sans',monospace; font-size:16px; font-weight:600; color:#e07a5f; line-height:1;">4/4</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:7px;">
+          <span style="font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#c99a6e;">Today only — dusk deadline, no nights</span>
+          <div style="display:flex; align-items:center; gap:9px; background:#fffaf0; padding:9px 13px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 0 0 3px #f0e0c4; filter:drop-shadow(0 4px 0 #e8d5b2); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+            <span style="width:20px; height:20px; flex:none; background:linear-gradient(#f7c948 40%, #6d5ca8 40%); box-shadow:inset 0 0 0 2px rgba(255,255,255,.4); clip-path:polygon(0 6px,6px 6px,6px 0,14px 0,14px 6px,20px 6px,20px 14px,14px 14px,14px 20px,6px 20px,6px 14px,0 14px);"></span>
+            <div style="flex:1;">
+              <div style="font-weight:600; font-size:13px; color:#5a462f;">Harvest 3 crops before dusk</div>
+              <div style="display:flex; align-items:center; gap:6px; margin-top:3px;">
+                <div style="flex:1; height:8px; background:#f6e9d2; box-shadow:inset 0 0 0 2px #e8d5b2; overflow:hidden;"><div style="width:33%; height:100%; background:#aadd85;"></div></div>
+                <span style="font-family:'Pixelify Sans',monospace; font-size:12px; color:#7cae4f;">1/3</span>
+              </div>
+            </div>
+            <span style="width:2px; height:26px; background:#f0e0c4;"></span>
+            <div style="text-align:center;">
+              <div style="font-size:9px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:#8a73c0;">Dusk in</div>
+              <div style="display:flex; gap:3px; margin-top:3px;">
+                <span style="width:8px; height:8px; background:#f5b23c;"></span>
+                <span style="width:8px; height:8px; background:#f5b23c;"></span>
+                <span style="width:8px; height:8px; background:#f5b23c;"></span>
+                <span style="width:8px; height:8px; background:#f5b23c;"></span>
+                <span style="width:8px; height:8px; background:#eadfc8;"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:7px;">
+          <span style="font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#c99a6e;">Puzzle intro blurb — shown on start</span>
+          <div style="background:#fffaf0; padding:13px 15px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 0 0 3px #f0e0c4; filter:drop-shadow(0 4px 0 #e8d5b2); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+            <div style="font-family:'Pixelify Sans',monospace; font-size:16px; font-weight:600; color:#6b5236;">Feed the Need</div>
+            <div style="font-size:13px; color:#7a6547; line-height:1.45; margin-top:4px;">One night is never enough for a tomato… unless it eats well. Feed is on the radial — hold a planted tile.</div>
+            <button style="margin-top:10px; padding:10px 22px; border:none; cursor:pointer; background:#aadd85; color:#3a5c1f; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; box-shadow:inset 0 0 0 3px #bfe89b; filter:drop-shadow(0 3px 0 #7fb35c); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">Let's grow</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============ 1e RESULT MODAL ============ -->
+    <div id="1e" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <a href="#1e" style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; background:#5a462f; color:#fdf3e0; padding:3px 9px;">1e</a>
+        <span style="font-size:13px; font-weight:600; color:#5a462f;">Result modal — animated star fill · par context</span>
+      </div>
+      <div data-screen-label="Result Modal" style="background:#fdf3e0; padding:10px; box-shadow:inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 8px 0 #dcc39a) drop-shadow(0 16px 24px rgba(120,85,25,.25)); clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px));">
+        <div style="width:370px; height:760px; position:relative; overflow:hidden; background:linear-gradient(#d8edf2 0%, #e7f2e4 48%, #fbeecb 100%);">
+          <div style="position:absolute; inset:0; opacity:.9;">
+            <x-import component-from-global-scope="farm-board" from="./farm-board.js" style="position:absolute; inset:0;" preset="tomato" cy="0.56" hint-size="100%,100%"></x-import>
+          </div>
+          <div style="position:absolute; inset:0; background:rgba(70,55,35,.38); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; padding:20px;">
+            <div style="width:100%; max-width:320px; background:#fdf6e7; padding:24px 20px 18px; text-align:center; box-shadow:inset 0 4px 0 rgba(255,255,255,.8), inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 7px 0 #dcc39a) drop-shadow(0 14px 24px rgba(60,45,20,.35)); clip-path:polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px));">
+              <div style="font-family:'Pixelify Sans',monospace; font-size:26px; font-weight:700; color:#6b5236;">Puzzle clear!</div>
+              <div style="display:flex; justify-content:center; gap:10px; margin:16px 0 6px;">
+                <span style="width:38px; height:38px; background:#f7c948; box-shadow:inset 0 0 0 3px #fce9b0, inset -5px -5px 0 rgba(200,140,10,.35); animation:ms-pop .4s .15s cubic-bezier(.34,1.56,.64,1) both; clip-path:polygon(0 12px,12px 12px,12px 0,26px 0,26px 12px,38px 12px,38px 26px,26px 26px,26px 38px,12px 38px,12px 26px,0 26px);"></span>
+                <span style="width:46px; height:46px; margin-top:-6px; background:#f7c948; box-shadow:inset 0 0 0 3px #fce9b0, inset -6px -6px 0 rgba(200,140,10,.35); animation:ms-pop .4s .38s cubic-bezier(.34,1.56,.64,1) both; clip-path:polygon(0 15px,15px 15px,15px 0,31px 0,31px 15px,46px 15px,46px 31px,31px 31px,31px 46px,15px 46px,15px 31px,0 31px);"></span>
+                <span style="width:38px; height:38px; background:#f7c948; box-shadow:inset 0 0 0 3px #fce9b0, inset -5px -5px 0 rgba(200,140,10,.35); animation:ms-pop .4s .61s cubic-bezier(.34,1.56,.64,1) both; clip-path:polygon(0 12px,12px 12px,12px 0,26px 0,26px 12px,38px 12px,38px 26px,26px 26px,26px 38px,12px 38px,12px 26px,0 26px);"></span>
+              </div>
+              <div style="font-family:'Pixelify Sans',monospace; font-size:15px; color:#c08a1e;">Done in 2 nights — par 2!</div>
+              <div style="font-size:12px; color:#a08a6c; margin-top:3px;">4 tomatoes, fed and fattened.</div>
+              <div style="display:flex; gap:8px; margin-top:18px;">
+                <button style="flex:1; padding:11px 6px; border:none; cursor:pointer; background:#fff1dd; color:#a0895f; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:13px; box-shadow:inset 0 0 0 3px #e7cfa5; filter:drop-shadow(0 3px 0 #dcc39a); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">Retry</button>
+                <button style="flex:1; padding:11px 6px; border:none; cursor:pointer; background:#fff1dd; color:#a0895f; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:13px; box-shadow:inset 0 0 0 3px #e7cfa5; filter:drop-shadow(0 3px 0 #dcc39a); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">Puzzles</button>
+                <button style="flex:1.4; padding:11px 6px; border:none; cursor:pointer; background:#aadd85; color:#3a5c1f; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:13px; box-shadow:inset 0 3px 0 rgba(255,255,255,.45), inset 0 -5px 0 rgba(40,80,20,.28), inset 0 0 0 3px #bfe89b; filter:drop-shadow(0 4px 0 #7fb35c); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">Next ›</button>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute; bottom:12px; left:0; right:0; text-align:center; font-size:11px; color:rgba(255,250,240,.85); text-shadow:0 1px 0 rgba(60,45,20,.4);">lose copy: "the dawn came too soon — try a different order?"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 1f FISHING OVERLAY ============ -->
+    <div id="1f" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <a href="#1f" style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; background:#5a462f; color:#fdf3e0; padding:3px 9px;">1f</a>
+        <span style="font-size:13px; font-weight:600; color:#5a462f;">Fishing minigame — tap when the bobber dips</span>
+      </div>
+      <div data-screen-label="Fishing Overlay" style="background:#fdf3e0; padding:10px; box-shadow:inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 8px 0 #dcc39a) drop-shadow(0 16px 24px rgba(120,85,25,.25)); clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px));">
+        <div style="width:370px; height:760px; position:relative; overflow:hidden; background:linear-gradient(#d8edf2 0%, #e7f2e4 48%, #fbeecb 100%);">
+          <div style="position:absolute; inset:0; opacity:.85;">
+            <x-import component-from-global-scope="farm-board" from="./farm-board.js" style="position:absolute; inset:0;" preset="farm" cy="0.4" hint-size="100%,100%"></x-import>
+          </div>
+          <div style="position:absolute; inset:0; background:linear-gradient(rgba(70,55,35,.05), rgba(70,55,35,.4) 60%);"></div>
+          <div style="position:absolute; left:12px; right:12px; bottom:14px; background:#fdf6e7; padding:18px 16px 16px; box-shadow:inset 0 4px 0 rgba(255,255,255,.8), inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 6px 0 #dcc39a) drop-shadow(0 12px 20px rgba(60,45,20,.3)); clip-path:polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px));">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+              <div style="font-family:'Pixelify Sans',monospace; font-size:19px; font-weight:600; color:#6b5236;">Something's nibbling…</div>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span style="width:16px; height:10px; background:#f0894a; clip-path:polygon(0 50%, 30% 0, 100% 0, 100% 100%, 30% 100%);"></span>
+                <span style="width:16px; height:10px; background:#f0894a; clip-path:polygon(0 50%, 30% 0, 100% 0, 100% 100%, 30% 100%);"></span>
+                <span style="width:16px; height:10px; background:#d8cbb0; clip-path:polygon(0 50%, 30% 0, 100% 0, 100% 100%, 30% 100%);"></span>
+              </div>
+            </div>
+            <div style="font-size:11px; color:#a08a6c; text-align:right; margin-top:2px;">2 fish left today</div>
+            <div style="position:relative; height:110px; margin-top:10px; background:#8fd3e0; overflow:hidden; box-shadow:inset 0 4px 0 #c1ebf3, inset 0 -6px 0 #68bad0, inset 0 0 0 3px #7cc4d6;">
+              <span style="position:absolute; left:18%; top:38%; width:26px; height:4px; background:rgba(255,255,255,.55);"></span>
+              <span style="position:absolute; left:64%; top:62%; width:20px; height:4px; background:rgba(255,255,255,.5);"></span>
+              <span style="position:absolute; left:74%; top:26%; width:16px; height:4px; background:rgba(255,255,255,.45);"></span>
+              <div style="position:absolute; left:50%; top:30px; transform:translateX(-50%); animation:ms-bobber 2.4s ease-in-out infinite;">
+                <span style="display:block; width:8px; height:14px; background:#9a6a3b; margin:0 auto;"></span>
+                <span style="display:block; width:22px; height:11px; background:#e05a4a; box-shadow:inset 0 0 0 2px rgba(255,255,255,.3);"></span>
+                <span style="display:block; width:22px; height:11px; background:#fffdf5; box-shadow:inset 0 0 0 2px rgba(0,0,0,.06);"></span>
+              </div>
+              <span style="position:absolute; left:50%; top:74px; width:56px; height:56px; margin-left:-28px; border:3px solid rgba(255,253,245,.9); border-radius:50%; animation:ms-ring 1.2s ease-out infinite;"></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:12px;">
+              <button style="flex:1; padding:14px; border:none; cursor:pointer; background:#6cc3de; color:#173f4d; font-family:'Pixelify Sans',monospace; font-weight:700; font-size:18px; animation:ms-pulse 1.2s ease-in-out infinite; box-shadow:inset 0 3px 0 rgba(255,255,255,.45), inset 0 -6px 0 rgba(20,80,100,.3), inset 0 0 0 3px #97d6e8; filter:drop-shadow(0 5px 0 #4a9db8); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">Tap!</button>
+            </div>
+            <div style="font-size:11px; color:#a08a6c; text-align:center; margin-top:9px;">a miss just means a smaller catch — no worries</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 1g MINING OVERLAY ============ -->
+    <div id="1g" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <a href="#1g" style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; background:#5a462f; color:#fdf3e0; padding:3px 9px;">1g</a>
+        <span style="font-size:13px; font-weight:600; color:#5a462f;">Mining minigame — catch the crit window</span>
+      </div>
+      <div data-screen-label="Mining Overlay" style="background:#fdf3e0; padding:10px; box-shadow:inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 8px 0 #dcc39a) drop-shadow(0 16px 24px rgba(120,85,25,.25)); clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px));">
+        <div style="width:370px; height:760px; position:relative; overflow:hidden; background:linear-gradient(#d8edf2 0%, #e7f2e4 48%, #fbeecb 100%);">
+          <div style="position:absolute; inset:0; opacity:.85;">
+            <x-import component-from-global-scope="farm-board" from="./farm-board.js" style="position:absolute; inset:0;" preset="farm" cy="0.4" hint-size="100%,100%"></x-import>
+          </div>
+          <div style="position:absolute; inset:0; background:linear-gradient(rgba(70,55,35,.05), rgba(70,55,35,.4) 60%);"></div>
+          <div style="position:absolute; left:12px; right:12px; bottom:14px; background:#fdf6e7; padding:18px 16px 16px; box-shadow:inset 0 4px 0 rgba(255,255,255,.8), inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 6px 0 #dcc39a) drop-shadow(0 12px 20px rgba(60,45,20,.3)); clip-path:polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px));">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+              <div style="font-family:'Pixelify Sans',monospace; font-size:19px; font-weight:600; color:#6b5236;">Swing true!</div>
+              <div style="display:flex; align-items:center; gap:5px;">
+                <span style="width:14px; height:14px; background:#8a94a0; box-shadow:inset 0 0 0 2px #b8c0ca; clip-path:polygon(0 4px,4px 4px,4px 0,10px 0,10px 4px,14px 4px,14px 10px,10px 10px,10px 14px,4px 14px,4px 10px,0 10px);"></span>
+                <span style="width:14px; height:14px; background:#d8cbb0; clip-path:polygon(0 4px,4px 4px,4px 0,10px 0,10px 4px,14px 4px,14px 10px,10px 10px,10px 14px,4px 14px,4px 10px,0 10px);"></span>
+              </div>
+            </div>
+            <div style="font-size:11px; color:#a08a6c; text-align:right; margin-top:2px;">1 strike left today</div>
+            <div style="position:relative; height:34px; margin-top:14px; background:#f6e9d2; box-shadow:inset 0 0 0 3px #e8d5b2; overflow:hidden;">
+              <div style="position:absolute; top:0; bottom:0; left:58%; width:26%; background:#ffd79b; box-shadow:inset 0 0 0 3px #f0bd5e;"></div>
+              <div style="position:absolute; top:0; bottom:0; left:66%; width:10%; background:#f7c948; box-shadow:inset 0 0 0 3px #fce9b0;"></div>
+              <div style="position:absolute; top:-2px; bottom:-2px; width:8px; background:#6b5236; box-shadow:inset 0 0 0 2px #8a6f4a; animation:ms-marker 1.5s ease-in-out infinite;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">
+              <span style="color:#b3a482;">soft</span>
+              <span style="color:#cf9b3f;">good</span>
+              <span style="color:#c08a1e;">crit!</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:12px;">
+              <button style="flex:1; padding:14px; border:none; cursor:pointer; background:#ffd79b; color:#7a4a12; font-family:'Pixelify Sans',monospace; font-weight:700; font-size:18px; box-shadow:inset 0 3px 0 rgba(255,255,255,.55), inset 0 -6px 0 rgba(150,100,20,.26), inset 0 0 0 3px #ffe6bd; filter:drop-shadow(0 5px 0 #e6ac5e); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">Strike</button>
+              <span style="font-family:'Pixelify Sans',monospace; font-size:14px; font-weight:600; color:#7cae4f; background:#eaf6dd; padding:6px 11px; box-shadow:inset 0 0 0 2px #cdeab0;">Perfect! ×2</span>
+            </div>
+            <div style="font-size:11px; color:#a08a6c; text-align:center; margin-top:9px;">spent rocks rest for the night — never a fail state</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 1h VISUAL SYSTEM ============ -->
+    <div id="1h" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <a href="#1h" style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; background:#5a462f; color:#fdf3e0; padding:3px 9px;">1h</a>
+        <span style="font-size:13px; font-weight:600; color:#5a462f;">Visual system — tokens · type · components · radial anatomy</span>
+      </div>
+      <div data-screen-label="Visual System" style="width:900px; background:#fdf3e0; padding:26px 26px 30px; display:flex; flex-direction:column; gap:24px; box-shadow:inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 8px 0 #dcc39a) drop-shadow(0 16px 24px rgba(120,85,25,.25)); clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px));">
+
+        <div>
+          <div style="font-family:'Pixelify Sans',monospace; font-size:13px; letter-spacing:1.4px; text-transform:uppercase; color:#c99a6e; margin-bottom:10px;">Color tokens</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#d8edf2; box-shadow:inset 0 0 0 2px rgba(0,0,0,.06);"></span><span style="font-size:11px; color:#7a6547;">sky <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#d8edf2</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#fbeecb; box-shadow:inset 0 0 0 2px rgba(0,0,0,.06);"></span><span style="font-size:11px; color:#7a6547;">dawn <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#fbeecb</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#fdf3e0; box-shadow:inset 0 0 0 2px rgba(0,0,0,.06);"></span><span style="font-size:11px; color:#7a6547;">card <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#fdf3e0</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#e7cfa5;"></span><span style="font-size:11px; color:#7a6547;">border <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#e7cfa5</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#5a462f;"></span><span style="font-size:11px; color:#7a6547;">ink <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#5a462f</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#a08862;"></span><span style="font-size:11px; color:#7a6547;">muted <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#a08862</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#f7c948;"></span><span style="font-size:11px; color:#7a6547;">coin <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#f7c948</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#a98bf0;"></span><span style="font-size:11px; color:#7a6547;">gem <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#a98bf0</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#aadd85;"></span><span style="font-size:11px; color:#7a6547;">grow <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#aadd85</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#7cae4f;"></span><span style="font-size:11px; color:#7a6547;">grow-deep <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#7cae4f</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#6cc3de;"></span><span style="font-size:11px; color:#7a6547;">water <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#6cc3de</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#c69c6d;"></span><span style="font-size:11px; color:#7a6547;">soil <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#c69c6d</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#8fd3e0;"></span><span style="font-size:11px; color:#7a6547;">pond <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#8fd3e0</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#b7ad93;"></span><span style="font-size:11px; color:#7a6547;">rock <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#b7ad93</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#e07a5f;"></span><span style="font-size:11px; color:#7a6547;">alert <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#e07a5f</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#201b45;"></span><span style="font-size:11px; color:#7a6547;">night <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#201b45</span></span></div>
+            <div style="display:flex; align-items:center; gap:7px; background:#fffaf0; padding:6px 10px 6px 7px; box-shadow:inset 0 0 0 2px #f0e0c4;"><span style="width:20px; height:20px; background:#8a5566;"></span><span style="font-size:11px; color:#7a6547;">tile-side <span style="font-family:'Pixelify Sans',monospace; color:#a08862;">#8a5566</span></span></div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:30px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:440px;">
+            <div style="font-family:'Pixelify Sans',monospace; font-size:13px; letter-spacing:1.4px; text-transform:uppercase; color:#c99a6e; margin-bottom:10px;">Type scale</div>
+            <div style="display:flex; flex-direction:column; gap:9px;">
+              <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;"><span style="font-family:'Pixelify Sans',monospace; font-size:34px; font-weight:700; color:#5a462f;">Sunrise Report</span><span style="font-size:10px; color:#b3a482;">display · Pixelify 34/700</span></div>
+              <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;"><span style="font-family:'Pixelify Sans',monospace; font-size:21px; font-weight:600; color:#c08a1e;">1,248</span><span style="font-size:10px; color:#b3a482;">numerals · Pixelify 21/600</span></div>
+              <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;"><span style="font-family:'Fredoka',sans-serif; font-size:15px; font-weight:600; color:#5a462f;">Card title</span><span style="font-size:10px; color:#b3a482;">title · Fredoka 15/600</span></div>
+              <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;"><span style="font-family:'Fredoka',sans-serif; font-size:13px; color:#7a6547;">Body copy, warm and plain.</span><span style="font-size:10px; color:#b3a482;">body · Fredoka 13/400</span></div>
+              <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;"><span style="font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#c99a6e;">Section label</span><span style="font-size:10px; color:#b3a482;">caps · Fredoka 10/600 +1.5</span></div>
+            </div>
+            <div style="font-family:'Pixelify Sans',monospace; font-size:13px; letter-spacing:1.4px; text-transform:uppercase; color:#c99a6e; margin:20px 0 10px;">Core components</div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <div style="display:flex; align-items:center; gap:7px; background:#fff7ea; padding:7px 12px 7px 9px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.16), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+                <span style="width:16px; height:16px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0; clip-path:polygon(0 5px,5px 5px,5px 0,11px 0,11px 5px,16px 5px,16px 11px,11px 11px,11px 16px,5px 16px,5px 11px,0 11px);"></span>
+                <span style="font-family:'Pixelify Sans',monospace; font-size:17px; font-weight:600; color:#c08a1e;">248</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:7px; background:#fff7ea; padding:7px 11px; box-shadow:inset 0 0 0 3px #f3d698; filter:drop-shadow(0 3px 0 #ecc98a);">
+                <svg width="12" height="12" viewBox="0 0 14 14"><path d="M8 1 L3 8 L7 8 L6 13 L11 6 L7 6 Z" fill="#f5a623"></path></svg>
+                <div style="width:70px; height:9px; background:#f6e2c6; box-shadow:inset 0 0 0 2px #edcb9e; overflow:hidden;"><div style="width:70%; height:100%; background:#f5b23c;"></div></div>
+                <span style="font-family:'Pixelify Sans',monospace; font-size:12px; font-weight:600; color:#c08a1e;">7/10</span>
+              </div>
+              <span style="font-family:'Pixelify Sans',monospace; font-size:12px; color:#c46d38; background:#ffe6cf; padding:2px 7px;">Lv 2/3</span>
+              <span style="font-family:'Pixelify Sans',monospace; font-size:12px; padding:3px 8px; background:#f3ecdb; color:#7a6547; box-shadow:inset 0 0 0 2px #e4d7ba;">5 × Copper Ore</span>
+              <span style="font-family:'Pixelify Sans',monospace; font-size:12px; padding:3px 8px; background:#f7e3dc; color:#c4523a; box-shadow:inset 0 0 0 2px #ecc6ba;">0/2 × Copper Bar</span>
+              <span style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; padding:6px 12px; color:#4a3826; background:#fff7ea; box-shadow:inset 0 0 0 3px #f3d698; filter:drop-shadow(0 3px 0 rgba(120,80,20,.25));">Watered · grows tonight</span>
+              <span style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; padding:6px 12px; color:#fff; background:#e07a5f; box-shadow:inset 0 0 0 3px #c85f47; filter:drop-shadow(0 3px 0 rgba(120,80,20,.25));">Out of energy</span>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px;">
+              <button style="padding:11px 20px; border:none; cursor:pointer; background:#aadd85; color:#3a5c1f; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; box-shadow:inset 0 3px 0 rgba(255,255,255,.45), inset 0 -5px 0 rgba(40,80,20,.28), inset 0 0 0 3px #bfe89b; filter:drop-shadow(0 4px 0 #7fb35c); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">Confirm / grow</button>
+              <button style="padding:11px 20px; border:none; cursor:pointer; background:#ffd79b; color:#7a4a12; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; box-shadow:inset 0 3px 0 rgba(255,255,255,.55), inset 0 -5px 0 rgba(150,100,20,.26), inset 0 0 0 3px #ffe6bd; filter:drop-shadow(0 4px 0 #e6ac5e); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">Cost / spend</button>
+              <button style="padding:11px 20px; border:none; cursor:pointer; background:#6d5ca8; color:#fff0b8; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; box-shadow:inset 0 3px 0 rgba(255,255,255,.3), inset 0 -5px 0 rgba(30,20,60,.42), inset 0 0 0 3px #8574c0; filter:drop-shadow(0 4px 0 #463880); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">Night / sleep</button>
+              <button style="padding:11px 20px; border:none; background:#efe7d4; color:#a29775; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; box-shadow:inset 0 0 0 3px #ddd2b8; clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">Disabled</button>
+            </div>
+            <div style="font-size:11px; color:#a08a6c; margin-top:14px; line-height:1.5;">Notched sticker = pixel-corner clip-path (3–8px steps by size) + inset top-light / bottom-shade + hard drop-shadow one shade darker. Motion: soft bounce on place, sticker press, ~90ms radial bloom, coin fountains — reduced-motion gets calm static equivalents.</div>
+          </div>
+
+          <div style="width:340px; flex:none;">
+            <div style="font-family:'Pixelify Sans',monospace; font-size:13px; letter-spacing:1.4px; text-transform:uppercase; color:#c99a6e; margin-bottom:10px;">Radial menu anatomy</div>
+            <div style="position:relative; height:340px; background:radial-gradient(circle at 50% 52%, rgba(32,27,69,.55), rgba(32,27,69,.28) 46%, rgba(32,27,69,.12) 75%), linear-gradient(#d8edf2, #e7f2e4 60%, #fbeecb); overflow:hidden;">
+              <div style="position:absolute; left:50%; top:30px; transform:translateX(-50%); white-space:nowrap; font-family:'Pixelify Sans',monospace; font-size:14px; font-weight:600; color:#fff7ea; text-shadow:0 2px 0 rgba(32,27,69,.6);">Wheat · stage 2/4</div>
+              <div style="position:absolute; left:50%; top:54%; width:0; height:0;">
+                <button style="position:absolute; left:0; top:0; transform:translate(-50%,-50%); width:84px; height:84px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border:none; background:#aadd85; color:#3a5c1f; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; box-shadow:inset 0 3px 0 rgba(255,255,255,.45), inset 0 -6px 0 rgba(40,80,20,.28), inset 0 0 0 3px #bfe89b; filter:drop-shadow(0 5px 0 #7fb35c) drop-shadow(0 8px 8px rgba(60,90,30,.28)); clip-path:polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px));">Water</button>
+                <button style="position:absolute; left:0; top:-98px; transform:translate(-50%,-50%) scale(1.14); width:66px; min-height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:6px 4px; border:none; background:#ffe1a0; color:#8a5c14; font-family:'Fredoka',sans-serif; font-weight:600; font-size:11px; box-shadow:inset 0 3px 0 rgba(255,255,255,.65), inset 0 -5px 0 rgba(150,100,20,.3), inset 0 0 0 3px #f0bd5e; filter:drop-shadow(0 4px 0 #d99f3e) drop-shadow(0 7px 7px rgba(120,80,20,.3)); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));">
+                  <span style="width:18px; height:18px; background:#ffbe66; box-shadow:inset 0 -3px 0 rgba(0,0,0,.16), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 4px,4px 4px,4px 0,14px 0,14px 4px,18px 4px,18px 14px,14px 14px,14px 18px,4px 18px,4px 14px,0 14px);"></span>
+                  <span>Feed</span>
+                  <span style="font-family:'Pixelify Sans',monospace; font-size:11px; line-height:1; padding:1px 5px; color:#c08a1e; background:#fff3d6;">8c</span>
+                </button>
+                <button style="position:absolute; left:93px; top:-30px; transform:translate(-50%,-50%); width:66px; min-height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:6px 4px; border:none; background:#fff7ea; color:#6b5236; font-family:'Fredoka',sans-serif; font-weight:600; font-size:11px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.16), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));">
+                  <span style="width:18px; height:18px; background:#e07a5f; box-shadow:inset 0 -3px 0 rgba(0,0,0,.16), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 4px,4px 4px,4px 0,14px 0,14px 4px,18px 4px,18px 14px,14px 14px,14px 18px,4px 18px,4px 14px,0 14px);"></span>
+                  <span>Uproot</span>
+                </button>
+                <button style="position:absolute; left:60px; top:78px; transform:translate(-50%,-50%); width:66px; min-height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:6px 4px; border:none; background:#fff7ea; color:#6b5236; font-family:'Fredoka',sans-serif; font-weight:600; font-size:11px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.16), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));">
+                  <span style="width:18px; height:18px; background:#f0894a; box-shadow:inset 0 -3px 0 rgba(0,0,0,.16), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 4px,4px 4px,4px 0,14px 0,14px 4px,18px 4px,18px 14px,14px 14px,14px 18px,4px 18px,4px 14px,0 14px);"></span>
+                  <span>Carrot</span>
+                  <span style="font-family:'Pixelify Sans',monospace; font-size:11px; line-height:1; padding:1px 5px; color:#c08a1e; background:#fff3d6;">4c</span>
+                </button>
+                <button style="position:absolute; left:-60px; top:78px; transform:translate(-50%,-50%); width:66px; min-height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:6px 4px; border:none; background:#efe7d4; opacity:.62; color:#6b5236; font-family:'Fredoka',sans-serif; font-weight:600; font-size:11px; box-shadow:inset 0 0 0 3px #ddd2b8; clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));">
+                  <span style="width:18px; height:18px; background:#6cc3de; filter:grayscale(.5); box-shadow:inset 0 -3px 0 rgba(0,0,0,.16); clip-path:polygon(0 4px,4px 4px,4px 0,14px 0,14px 4px,18px 4px,18px 14px,14px 14px,14px 18px,4px 18px,4px 14px,0 14px);"></span>
+                  <span>Sprinkler</span>
+                  <span style="font-family:'Pixelify Sans',monospace; font-size:11px; line-height:1; padding:1px 5px; color:#c46d5e; background:#f4e0d6;">60c</span>
+                </button>
+                <button style="position:absolute; left:-93px; top:-30px; transform:translate(-50%,-50%); width:66px; min-height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:6px 4px; border:none; background:#fff7ea; color:#6b5236; font-family:'Fredoka',sans-serif; font-weight:600; font-size:11px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.16), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));">
+                  <span style="width:18px; height:18px; background:#c79a5a; box-shadow:inset 0 -3px 0 rgba(0,0,0,.16), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 4px,4px 4px,4px 0,14px 0,14px 4px,18px 4px,18px 14px,14px 14px,14px 18px,4px 18px,4px 14px,0 14px);"></span>
+                  <span>Scarecrow</span>
+                  <span style="font-family:'Pixelify Sans',monospace; font-size:11px; line-height:1; padding:1px 5px; color:#c08a1e; background:#fff3d6;">45c</span>
+                </button>
+                <span style="position:absolute; left:34px; top:-148px; width:20px; height:20px; display:flex; align-items:center; justify-content:center; background:#5a462f; color:#fdf3e0; font-family:'Pixelify Sans',monospace; font-size:12px; border-radius:50%;">2</span>
+                <span style="position:absolute; left:34px; top:-34px; width:20px; height:20px; display:flex; align-items:center; justify-content:center; background:#5a462f; color:#fdf3e0; font-family:'Pixelify Sans',monospace; font-size:12px; border-radius:50%;">1</span>
+                <span style="position:absolute; left:52px; top:-90px; width:20px; height:20px; display:flex; align-items:center; justify-content:center; background:#5a462f; color:#fdf3e0; font-family:'Pixelify Sans',monospace; font-size:12px; border-radius:50%;">3</span>
+                <span style="position:absolute; left:-104px; top:44px; width:20px; height:20px; display:flex; align-items:center; justify-content:center; background:#5a462f; color:#fdf3e0; font-family:'Pixelify Sans',monospace; font-size:12px; border-radius:50%;">4</span>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:12px; font-size:12px; color:#7a6547;">
+              <div style="display:flex; gap:8px;"><span style="width:18px; height:18px; flex:none; display:flex; align-items:center; justify-content:center; background:#5a462f; color:#fdf3e0; font-family:'Pixelify Sans',monospace; font-size:11px; border-radius:50%;">1</span><span><b>Deadzone centre</b> — the contextual primary verb; quick-tap runs it without opening the menu.</span></div>
+              <div style="display:flex; gap:8px;"><span style="width:18px; height:18px; flex:none; display:flex; align-items:center; justify-content:center; background:#5a462f; color:#fdf3e0; font-family:'Pixelify Sans',monospace; font-size:11px; border-radius:50%;">2</span><span><b>Highlighted slice</b> — thumb-drag warms it gold + scales 1.14; release commits. vibrate(8) tick per slice.</span></div>
+              <div style="display:flex; gap:8px;"><span style="width:18px; height:18px; flex:none; display:flex; align-items:center; justify-content:center; background:#5a462f; color:#fdf3e0; font-family:'Pixelify Sans',monospace; font-size:11px; border-radius:50%;">3</span><span><b>Coin-cost chip</b> — on every paid verb (seed prices, Feed 8c).</span></div>
+              <div style="display:flex; gap:8px;"><span style="width:18px; height:18px; flex:none; display:flex; align-items:center; justify-content:center; background:#5a462f; color:#fdf3e0; font-family:'Pixelify Sans',monospace; font-size:11px; border-radius:50%;">4</span><span><b>Unaffordable</b> — desaturated card, red cost; still readable, never hidden. Gated verbs simply don't appear.</span></div>
+              <div style="display:flex; gap:8px;"><span style="width:18px; height:18px; flex:none;"></span><span>Dark radial scrim keeps slices legible over the busy board. ~90ms bloom-in; menu clamps inside safe margins near edges. Highlighting the Sprinkler slice previews its plus-shaped coverage on the board.</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

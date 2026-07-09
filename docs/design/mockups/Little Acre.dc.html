@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body { font-family: 'Fredoka', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #7cae4f; text-decoration: none; }
+    a:hover { color: #5f9a3e; }
+    canvas { display: block; image-rendering: pixelated; }
+    @keyframes fi-pop { 0% { transform: scale(.9) translateY(6px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+    @keyframes fi-toast { 0% { transform: translateY(10px) scale(.9); opacity: 0; } 12% { transform: translateY(0) scale(1); opacity: 1; } 82% { opacity: 1; } 100% { transform: translateY(-6px); opacity: 0; } }
+    @keyframes fi-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    @keyframes fi-stars { 0%,100% { opacity: .4; } 50% { opacity: 1; } }
+    @keyframes fi-bloom { 0% { transform: scale(.55); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes fi-rise { 0% { transform: translateY(18px) scale(.94); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+    @keyframes fi-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; transition-duration: .001s !important; } }
+  </style>
+</helmet>
+<div data-screen-label="Farm" style="position:relative; width:100%; height:100vh; min-height:520px; overflow:hidden; background:linear-gradient(#d8edf2 0%, #e7f2e4 48%, #fbeecb 100%); font-family:'Fredoka',sans-serif; user-select:none; -webkit-user-select:none;">
+
+  <!-- GAME CANVAS -->
+  <div style="position:absolute; inset:0;">
+    <canvas id="farm-canvas" style="touch-action:none; -webkit-touch-callout:none; cursor:pointer;"></canvas>
+  </div>
+
+  <!-- TILE TOOLTIP -->
+  <sc-if value="{{ hover }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ hoverStyle }}">
+      <div style="font-family:'Pixelify Sans',monospace; font-size:14px; font-weight:600; color:#6b5236;">{{ hover.name }}</div>
+      <div style="font-size:11px; color:#a08a6c; margin-top:1px;">{{ hover.sub }}</div>
+    </div>
+  </sc-if>
+
+  <!-- TOP HUD -->
+  <div style="position:absolute; top:0; left:0; right:0; padding:12px 12px 0; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; pointer-events:none; z-index:10;">
+    <div style="display:flex; flex-direction:column; gap:7px; align-items:flex-start; pointer-events:auto;">
+      <div style="display:flex; align-items:center; gap:7px; background:#fff7ea; padding:7px 13px 7px 9px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.16), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a) drop-shadow(0 7px 6px rgba(150,110,30,.2)); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+        <span style="width:17px; height:17px; background:#f7c948; box-shadow:inset 0 0 0 2px #fce9b0, inset -3px -3px 0 rgba(200,140,10,.4); clip-path:polygon(0 5px,5px 5px,5px 0,12px 0,12px 5px,17px 5px,17px 12px,12px 12px,12px 17px,5px 17px,5px 12px,0 12px); display:inline-block;"></span>
+        <span style="font-family:'Pixelify Sans',monospace; font-size:20px; font-weight:600; color:#c08a1e; line-height:1; min-width:44px;">{{ coins }}</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:7px; background:#f5eeff; padding:6px 12px 6px 9px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(90,60,150,.14), inset 0 0 0 3px #d3bff2; filter:drop-shadow(0 4px 0 #c8b0ec) drop-shadow(0 7px 6px rgba(90,60,150,.18)); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+        <span style="width:13px; height:13px; background:#a98bf0; transform:rotate(45deg); box-shadow:inset 0 0 0 2px #efe3ff, inset -3px -3px 0 rgba(80,50,150,.35); display:inline-block;"></span>
+        <span style="font-family:'Pixelify Sans',monospace; font-size:17px; font-weight:600; color:#8a63e0; line-height:1;">{{ gems }}</span>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:stretch; gap:8px; pointer-events:auto;">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+        <div style="display:flex; align-items:center; gap:8px; background:#fff2e4; padding:7px 12px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(160,100,50,.14), inset 0 0 0 3px #f4cfa6; filter:drop-shadow(0 4px 0 #eec092) drop-shadow(0 7px 6px rgba(160,100,50,.16)); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+          <span style="font-size:10px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:#cf8f5c;">Day</span>
+          <span style="font-family:'Pixelify Sans',monospace; font-size:17px; font-weight:600; color:#c46d38; line-height:1;">{{ day }}</span>
+          <span style="width:2px; height:13px; background:#f0cfa8;"></span>
+          <span style="font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#c99a6e;">Bloom</span>
+          <span style="font-family:'Pixelify Sans',monospace; font-size:13px; color:#c46d38;">{{ bloomTxt }}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:7px; background:#fff7ea; padding:6px 11px; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.14), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a) drop-shadow(0 7px 6px rgba(150,110,30,.16)); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+          <svg width="13" height="13" viewBox="0 0 14 14"><path d="M8 1 L3 8 L7 8 L6 13 L11 6 L7 6 Z" fill="#f5a623"></path></svg>
+          <div style="width:clamp(64px, 16vw, 110px); height:10px; background:#f6e2c6; box-shadow:inset 0 0 0 2px #edcb9e; overflow:hidden; clip-path:polygon(0 2px,2px 2px,2px 0,calc(100% - 2px) 0,calc(100% - 2px) 2px,100% 2px,100% calc(100% - 2px),calc(100% - 2px) calc(100% - 2px),calc(100% - 2px) 100%,2px 100%,2px calc(100% - 2px),0 calc(100% - 2px));">
+            <div style="width:{{ energyPct }}; height:100%; background:#f5b23c; box-shadow:inset 0 2px 0 rgba(255,255,255,.4); transition:width .25s;"></div>
+          </div>
+          <span style="font-family:'Pixelify Sans',monospace; font-size:13px; font-weight:600; color:#c08a1e; line-height:1;">{{ energyTxt }}</span>
+        </div>
+      </div>
+      <button onClick="{{ onSleep }}" style="{{ sleepStyle }}">
+        <svg width="24" height="24" viewBox="0 0 26 26"><path d="M18 15 A7 7 0 1 1 11 6 A5.5 5.5 0 0 0 18 15 Z" fill="#fff0b8"></path></svg>
+        <span>Sleep</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div style="position:absolute; left:0; right:0; bottom:158px; display:flex; flex-direction:column-reverse; align-items:center; gap:6px; pointer-events:none; z-index:12;">
+    <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="0">
+      <div style="{{ t.style }}">{{ t.text }}</div>
+    </sc-for>
+  </div>
+
+  <!-- FIRST-RUN HINT -->
+  <sc-if value="{{ hintOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; left:0; right:0; bottom:96px; display:flex; justify-content:center; pointer-events:none; z-index:9;">
+      <div style="display:flex; align-items:center; gap:8px; background:rgba(255,247,234,.94); padding:7px 14px; animation:fi-bob 2.2s ease-in-out infinite; box-shadow:inset 0 0 0 3px #f3d698; filter:drop-shadow(0 3px 0 #ecc98a); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+        <span style="width:10px; height:10px; background:#aadd85; box-shadow:inset 0 0 0 2px #bfe89b;"></span>
+        <span style="font-size:12px; font-weight:600; color:#8a6f4a;">Tap a tile to act · hold for more</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- RADIAL MENU -->
+  <sc-if value="{{ radialOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeRadial }}" style="{{ scrimStyle }}"></div>
+    <div data-screen-label="Radial Menu" style="{{ radialWrapStyle }}">
+      <div style="{{ radialTitleStyle }}">{{ radialTitle }}</div>
+      <button onClick="{{ radialCenterGo }}" style="{{ radialCenterStyle }}">
+        <span style="font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; line-height:1.1; text-align:center;">{{ radialCenterLabel }}</span>
+        <sc-if value="{{ radialCenterCost }}" hint-placeholder-val="{{ false }}">
+          <span style="font-family:'Pixelify Sans',monospace; font-size:12px; opacity:.8; line-height:1;">{{ radialCenterCost }}</span>
+        </sc-if>
+      </button>
+      <sc-for list="{{ radialSlices }}" as="s" hint-placeholder-count="0">
+        <button onClick="{{ s.go }}" style="{{ s.style }}">
+          <span style="{{ s.iconStyle }}"></span>
+          <span style="font-family:'Fredoka',sans-serif; font-weight:600; font-size:11px; line-height:1.05; text-align:center;">{{ s.label }}</span>
+          <sc-if value="{{ s.cost }}" hint-placeholder-val="{{ false }}">
+            <span style="{{ s.costStyle }}">{{ s.cost }}</span>
+          </sc-if>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- BOTTOM EDGE: STORE ONLY -->
+  <div style="position:absolute; left:0; right:0; bottom:0; padding:12px 12px 16px; display:flex; justify-content:center; z-index:10; pointer-events:none;">
+    <button onClick="{{ openStore }}" style="pointer-events:auto; display:flex; align-items:center; justify-content:center; gap:10px; min-width:150px; padding:14px 28px; border:none; background:#aadd85; color:#3a5c1f; box-shadow:inset 0 3px 0 rgba(255,255,255,.45), inset 0 -6px 0 rgba(40,80,20,.28), inset 0 0 0 3px #bfe89b; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:17px; filter:drop-shadow(0 6px 0 #7fb35c) drop-shadow(0 10px 8px rgba(60,90,30,.22)); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+      <svg width="24" height="24" viewBox="0 0 22 22"><rect x="4" y="8" width="14" height="8" fill="#fbf3dc"></rect><rect x="4" y="6" width="14" height="3" fill="#e58a6a"></rect><rect x="6" y="6" width="2" height="3" fill="#fbf3dc"></rect><rect x="10" y="6" width="2" height="3" fill="#fbf3dc"></rect><rect x="14" y="6" width="2" height="3" fill="#fbf3dc"></rect></svg>
+      <span>Store</span>
+    </button>
+  </div>
+
+  <!-- SUNRISE REPORT -->
+  <sc-if value="{{ reportOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; inset:0; z-index:22; background:rgba(70,55,35,.32); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; padding:18px;">
+      <div data-screen-label="Sunrise Report" style="width:100%; max-width:340px; background:#fdf6e7; padding:22px 20px 18px; animation:fi-rise .28s cubic-bezier(.34,1.4,.64,1); box-shadow:inset 0 4px 0 rgba(255,255,255,.8), inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 7px 0 #dcc39a) drop-shadow(0 14px 24px rgba(120,85,25,.28)); clip-path:polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px));">
+        <div style="text-align:center; margin-bottom:14px;">
+          <span style="display:inline-block; width:44px; height:44px; background:#f7c948; border-radius:50%; box-shadow:inset -6px -6px 0 rgba(200,140,10,.35), 0 0 26px rgba(247,201,72,.55); margin-bottom:8px;"></span>
+          <div style="font-family:'Pixelify Sans',monospace; font-size:24px; font-weight:600; color:#6b5236;">Sunrise Report</div>
+          <div style="font-size:13px; color:#a08a6c; margin-top:2px;">Day {{ day }} begins</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:7px; margin-bottom:16px;">
+          <sc-for list="{{ reportRows }}" as="row" hint-placeholder-count="0">
+            <div style="display:flex; align-items:center; gap:10px; background:#fffaf0; padding:9px 12px; box-shadow:inset 0 0 0 3px #f0e0c4; clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">
+              <span style="{{ row.iconStyle }}"></span>
+              <span style="font-size:13px; font-weight:500; color:#5a462f;">{{ row.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ closeReport }}" style="width:100%; padding:13px; border:none; background:#aadd85; color:#3a5c1f; box-shadow:inset 0 3px 0 rgba(255,255,255,.45), inset 0 -5px 0 rgba(40,80,20,.28), inset 0 0 0 3px #bfe89b; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:16px; filter:drop-shadow(0 5px 0 #7fb35c); clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">Start the day</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- NIGHT OVERLAY -->
+  <div style="{{ nightStyle }}">
+    <div style="position:absolute; inset:0; overflow:hidden;">
+      <span style="position:absolute; top:14%; left:18%; width:3px; height:3px; background:#fff; animation:fi-stars 2.2s infinite;"></span>
+      <span style="position:absolute; top:22%; left:70%; width:3px; height:3px; background:#fff; animation:fi-stars 1.8s .3s infinite;"></span>
+      <span style="position:absolute; top:33%; left:44%; width:2px; height:2px; background:#fff; animation:fi-stars 2.6s .6s infinite;"></span>
+      <span style="position:absolute; top:12%; left:52%; width:2px; height:2px; background:#fff; animation:fi-stars 2s .9s infinite;"></span>
+      <span style="position:absolute; top:26%; left:30%; width:2px; height:2px; background:#fff; animation:fi-stars 2.4s .2s infinite;"></span>
+      <span style="position:absolute; top:40%; left:78%; width:2px; height:2px; background:#fff; animation:fi-stars 2.1s .5s infinite;"></span>
+    </div>
+    <div style="position:relative; text-align:center;">
+      <div style="margin:0 auto 16px; width:70px; height:70px; position:relative; animation:fi-pulse 3s infinite;">
+        <div style="position:absolute; inset:0; background:#fff0b8; border-radius:50%; box-shadow:0 0 40px rgba(255,240,184,.5);"></div>
+        <div style="position:absolute; top:-6px; right:-10px; width:64px; height:64px; border-radius:50%; background:#201b45;"></div>
+      </div>
+      <div style="font-family:'Pixelify Sans',monospace; font-size:34px; font-weight:600; color:#fdf3e0; letter-spacing:2px;">{{ nightTitle }}</div>
+      <div style="font-family:'Fredoka',sans-serif; font-size:15px; color:#c8bfe0; margin-top:6px;">{{ nightSub }}</div>
+    </div>
+  </div>
+
+  <!-- STORE MODAL (Shop · Craft · Boost · Almanac) -->
+  <sc-if value="{{ storeOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeStore }}" style="position:absolute; inset:0; background:rgba(80,60,35,.3); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; padding:14px; z-index:20;">
+      <div data-screen-label="Store" onClick="{{ stop }}" style="width:100%; max-width:620px; max-height:88vh; overflow:auto; background:#fdf6e7; box-shadow:inset 0 0 0 4px #e7cfa5; filter:drop-shadow(0 8px 0 #dcc39a) drop-shadow(0 16px 30px rgba(120,85,25,.28)); animation:fi-pop .16s ease-out; clip-path:polygon(0 7px,7px 7px,7px 0,calc(100% - 7px) 0,calc(100% - 7px) 7px,100% 7px,100% calc(100% - 7px),calc(100% - 7px) calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,7px calc(100% - 7px),0 calc(100% - 7px));">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 16px 10px; position:sticky; top:0; background:#fdf6e7; z-index:2;">
+          <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            <button onClick="{{ showShop }}" style="{{ tabShopStyle }}">Shop</button>
+            <button onClick="{{ showCraft }}" style="{{ tabCraftStyle }}">Craft</button>
+            <button onClick="{{ showBoost }}" style="{{ tabBoostStyle }}">Boost</button>
+            <button onClick="{{ showGuide }}" style="{{ tabGuideStyle }}">Almanac</button>
+          </div>
+          <button onClick="{{ closeStore }}" style="width:34px; height:34px; flex:none; border:none; background:#fff1dd; box-shadow:inset 0 0 0 3px #e7cfa5; color:#a0895f; font-size:16px; cursor:pointer; clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">✕</button>
+        </div>
+
+        <!-- SHOP TAB -->
+        <sc-if value="{{ isShop }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:4px 16px 18px; display:grid; grid-template-columns:repeat(auto-fill,minmax(178px,1fr)); gap:10px;">
+          <sc-for list="{{ shopItems }}" as="it" hint-placeholder-count="4">
+            <div style="background:#fffaf0; box-shadow:inset 0 0 0 3px #f0e0c4; padding:12px; display:flex; flex-direction:column; gap:8px; clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="width:34px; height:34px; flex:none; background:{{ it.color }}; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));"></span>
+                <div style="min-width:0;">
+                  <div style="font-weight:600; font-size:14px; color:#5a462f;">{{ it.name }}</div>
+                  <div style="font-size:11px; color:#a08862;">{{ it.tag }}</div>
+                </div>
+              </div>
+              <div style="font-size:12px; color:#7a6547; line-height:1.35; min-height:32px;">{{ it.desc }}</div>
+              <button onClick="{{ it.onBuy }}" style="{{ it.btnStyle }}">{{ it.btnLabel }}</button>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <!-- CRAFT TAB -->
+        <sc-if value="{{ isCraft }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:4px 16px 18px; display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; align-items:center; gap:9px; background:#eef4ff; padding:9px 12px; box-shadow:inset 0 0 0 3px #cfdcf2; clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));">
+            <span style="width:10px; height:10px; background:#7ba3d9; box-shadow:inset 0 0 0 2px #b3ccec;"></span>
+            <span style="font-size:12px; font-weight:600; color:#5a76a0;">A peek at the workbench — crafting arrives with machines</span>
+          </div>
+          <sc-for list="{{ crafts }}" as="cr" hint-placeholder-count="4">
+            <div style="{{ cr.cardStyle }}">
+              <div style="display:flex; align-items:center; gap:11px;">
+                <span style="{{ cr.iconStyle }}"></span>
+                <div style="min-width:0; flex:1;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span style="font-weight:600; font-size:14px; color:#5a462f;">{{ cr.name }}</span>
+                    <sc-if value="{{ cr.note }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-family:'Pixelify Sans',monospace; font-size:11px; color:#a0895f; background:#f3e6cc; padding:2px 7px; box-shadow:inset 0 0 0 2px #e7d6b4;">{{ cr.note }}</span>
+                    </sc-if>
+                  </div>
+                  <div style="font-size:11px; color:#a08862; margin-top:1px;">{{ cr.tag }}</div>
+                </div>
+                <button onClick="{{ cr.onCraft }}" style="{{ cr.btnStyle }}">{{ cr.btn }}</button>
+              </div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:9px;">
+                <sc-for list="{{ cr.ing }}" as="ig" hint-placeholder-count="2">
+                  <span style="{{ ig.style }}">{{ ig.label }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <!-- BOOST TAB -->
+        <sc-if value="{{ isBoost }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:4px 16px 18px; display:flex; flex-direction:column; gap:9px;">
+          <sc-for list="{{ upgrades }}" as="up" hint-placeholder-count="2">
+            <div style="display:flex; align-items:center; gap:12px; background:#fffaf0; box-shadow:inset 0 0 0 3px #f0e0c4; padding:12px 14px; clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));">
+              <span style="width:40px; height:40px; flex:none; background:{{ up.color }}; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));"></span>
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-weight:600; font-size:15px; color:#5a462f;">{{ up.name }}</span>
+                  <span style="font-family:'Pixelify Sans',monospace; font-size:12px; color:#c46d38; background:#ffe6cf; padding:1px 6px;">{{ up.level }}</span>
+                </div>
+                <div style="font-size:12px; color:#7a6547; margin-top:2px;">{{ up.desc }}</div>
+              </div>
+              <button onClick="{{ up.onBuy }}" style="{{ up.btnStyle }}">{{ up.btnLabel }}</button>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <!-- ALMANAC TAB -->
+        <sc-if value="{{ isGuide }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:4px 16px 18px; display:flex; flex-direction:column; gap:14px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span style="font-size:12px; color:#a08862;">Everything you have met on your little acre.</span>
+            <span style="font-family:'Pixelify Sans',monospace; font-size:13px; color:#c08a1e; background:#fff3d6; padding:3px 9px; box-shadow:inset 0 0 0 2px #f3d698;">{{ seenCount }}</span>
+          </div>
+          <sc-for list="{{ guide }}" as="cat" hint-placeholder-count="4">
+            <div>
+              <div style="font-family:'Pixelify Sans',monospace; font-size:12px; letter-spacing:1.2px; text-transform:uppercase; color:#c99a6e; margin-bottom:7px;">{{ cat.title }}</div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:8px;">
+                <sc-for list="{{ cat.items }}" as="g" hint-placeholder-count="4">
+                  <div style="{{ g.cardStyle }}">
+                    <span style="{{ g.iconStyle }}"></span>
+                    <div style="min-width:0;">
+                      <div style="font-family:'Pixelify Sans',monospace; font-size:13px; color:#5a462f;">{{ g.name }}</div>
+                      <div style="font-size:11px; color:#a08862; line-height:1.3;">{{ g.desc }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;100vh&quot;},&quot;holdMs&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:380,&quot;min&quot;:200,&quot;max&quot;:700,&quot;unit&quot;:&quot;ms&quot;,&quot;section&quot;:&quot;Feel&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;juice&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;section&quot;:&quot;Feel&quot;,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showHints&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;section&quot;:&quot;Feel&quot;,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = {
+    hover: null,
+    storeOpen: false, storeTab: 'shop',
+    seen: { carrot: 1, wheat: 1, plot: 1, pond: 1, rock: 1, flower: 1 },
+    coins: 120, gems: 0, day: 1, energy: 12, maxEnergy: 12, bloom: 1.0,
+    phase: 'day', night: { title: '', sub: '' },
+    report: null,
+    toasts: [],
+    radial: null,
+    unlocked: { carrot: 1, wheat: 1 },
+    tools: {},
+    up: { energy: 0, fert: 0 },
+    lastCrop: 'carrot',
+    hintDone: false,
+  };
+
+  CROPS = {
+    carrot:  { name: 'Carrot',  cost: 4,  sell: 14, color: '#f0894a', leaf: '#83c250' },
+    wheat:   { name: 'Wheat',   cost: 7,  sell: 26, color: '#eecf5f', leaf: '#d1ad5c' },
+    lettuce: { name: 'Lettuce', cost: 10, sell: 38, color: '#8fce5e', leaf: '#b6e388' },
+    tomato:  { name: 'Tomato',  cost: 8,  sell: 30, color: '#ef6a4e', leaf: '#6cb04a' },
+  };
+  LAND = {
+    flower: { name: 'Flowers', cost: 30,  kind: 'flower', color: '#c9a6ff' },
+    pond:   { name: 'Pond',    cost: 90,  kind: 'pond',   color: '#8fd3e0' },
+    rock:   { name: 'Rock',    cost: 140, kind: 'rock',   color: '#b7ad93' },
+  };
+  STRUCT = {
+    sprinkler: { name: 'Sprinkler', cost: 60, color: '#6cc3de' },
+    scarecrow: { name: 'Scarecrow', cost: 45, color: '#c79a5a' },
+  };
+
+  holdMs() { return this.props.holdMs ?? 380; }
+  juiceOn() { return this.props.juice ?? true; }
+  maxStock() { return 3 + (this.state.tools.rod ? 1 : 0); }
+  maxCharges() { return 2 + (this.state.tools.pick ? 1 : 0); }
+  feedStages() { return 1 + this.state.up.fert; }
+
+  componentDidMount() {
+    this.canvas = document.getElementById('farm-canvas');
+    if (!this.canvas) return;
+    this.ctx = this.canvas.getContext('2d');
+    this.fx = []; this.shake = 0; this._lt = null; this._tid = 0;
+    this.press = null; this._covTile = null; this._covUntil = 0;
+    this.setupTiles();
+    this.resize();
+    this._rz = () => this.resize();
+    window.addEventListener('resize', this._rz);
+    this._pd = (e) => this.pointerDown(e);
+    this._pm = (e) => this.pointerMove(e);
+    this._pu = (e) => this.pointerUp(e);
+    this._pc = () => this.pointerCancel();
+    this._cm = (e) => e.preventDefault();
+    this.canvas.addEventListener('pointerdown', this._pd);
+    window.addEventListener('pointermove', this._pm);
+    window.addEventListener('pointerup', this._pu);
+    window.addEventListener('pointercancel', this._pc);
+    this.canvas.addEventListener('contextmenu', this._cm);
+    this._loop = (ms) => {
+      const time = ms / 1000;
+      if (this._lt == null) this._lt = time;
+      const dt = Math.min(0.05, time - this._lt); this._lt = time;
+      this.draw(time, dt);
+      this.raf = requestAnimationFrame(this._loop);
+    };
+    this.raf = requestAnimationFrame(this._loop);
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+    window.removeEventListener('resize', this._rz);
+    window.removeEventListener('pointermove', this._pm);
+    window.removeEventListener('pointerup', this._pu);
+    window.removeEventListener('pointercancel', this._pc);
+    clearTimeout(this._t1); clearTimeout(this._t2); clearTimeout(this._hold); clearTimeout(this._hovT);
+    if (this.canvas) { this.canvas.removeEventListener('pointerdown', this._pd); this.canvas.removeEventListener('contextmenu', this._cm); }
+  }
+
+  setupTiles() {
+    let s = 1337; const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+    const layout = [
+      ['rock:', 'tilled:carrot:3:0', 'grass:'],
+      ['tilled:wheat:1:0', 'tilled::0:0', 'grass:'],
+      ['pond:', 'grass:', 'flower:'],
+    ];
+    this.tiles = [];
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+      const parts = layout[r][c].split(':');
+      const kind = parts[0];
+      const crop = parts[1] || null;
+      const stage = parts[2] ? parseInt(parts[2]) : 0;
+      const watered = parts[3] === '1';
+      const spk = []; const n = kind === 'pond' ? 16 : (kind === 'tilled' ? 22 : 30);
+      for (let i = 0; i < n; i++) spk.push([0.06 + rnd() * 0.88, 0.06 + rnd() * 0.88, rnd()]);
+      const fringe = [];
+      for (let i = 0; i < 16; i++) fringe.push({ u: 0.05 + rnd() * 0.9, len: 2 + rnd() * 4, side: i % 2, k: rnd() });
+      const spots = [];
+      for (const a of [0.3, 0.62]) for (const b of [0.3, 0.62]) spots.push([a, b, rnd() * 6.28]);
+      this.tiles.push({ r, c, kind, crop, stage, watered, wilted: false, structure: null, spk, fringe, spots, placeT: null, placeDone: true, popT: null, nudgeT: null, stock: this.maxStock(), charges: this.maxCharges() });
+    }
+    this.amb = [];
+    for (let i = 0; i < 14; i++) this.amb.push({ x: Math.random(), y: Math.random(), sp: 0.02 + Math.random() * 0.04, ph: Math.random() * 6.28 });
+  }
+
+  resize() {
+    const c = this.canvas; if (!c || !c.parentElement) return;
+    const rect = c.parentElement.getBoundingClientRect();
+    this.cssW = rect.width; this.cssH = rect.height;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    c.width = Math.round(this.cssW * dpr); c.height = Math.round(this.cssH * dpr);
+    c.style.width = this.cssW + 'px'; c.style.height = this.cssH + 'px';
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.ctx.imageSmoothingEnabled = false;
+    const sc = Math.max(0.55, Math.min(1.2, Math.min((this.cssW - 24) / 500, (this.cssH - 235) / 295)));
+    this.sc = sc;
+    this.tileW = 158 * sc; this.tileH = 80 * sc; this.D = 26 * sc;
+    this.HW = this.tileW / 2; this.QH = this.tileH / 2;
+    this.stepX = this.HW; this.stepY = this.QH;
+    const topPad = 112, botPad = 92;
+    const boardH = 3 * this.tileH + this.D;
+    this.originX = this.cssW / 2;
+    this.originY = topPad + Math.max(8, (this.cssH - topPad - botPad - boardH) / 2);
+    for (const t of this.tiles) {
+      t.cx = this.originX + (t.c - t.r) * this.stepX;
+      t.cy = this.originY + (t.c + t.r) * this.stepY;
+    }
+  }
+
+  tileAt(mx, my) {
+    const sorted = [...this.tiles].sort((a, b) => (b.r + b.c) - (a.r + a.c));
+    for (const t of sorted) {
+      const dcx = mx - t.cx, dcy = my - (t.cy + this.QH);
+      if (Math.abs(dcx) / this.HW + Math.abs(dcy) / this.QH <= 1) return t;
+    }
+    return null;
+  }
+  tileByRC(r, c) { return this.tiles.find(t => t.r === r && t.c === c); }
+  coveredBy(t) {
+    for (const o of this.tiles) {
+      if (o.structure !== 'sprinkler') continue;
+      if (Math.abs(o.r - t.r) + Math.abs(o.c - t.c) <= 1) return true;
+    }
+    return false;
+  }
+  plusSet(r, c) {
+    const set = new Set();
+    for (const [dr, dc] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (this.tileByRC(r + dr, c + dc)) set.add((r + dr) + '-' + (c + dc));
+    }
+    return set;
+  }
+
+  rel(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    return { mx: e.clientX - rect.left, my: e.clientY - rect.top };
+  }
+
+  pointerDown(e) {
+    if (!e.isPrimary) return;
+    if (this.state.phase !== 'day' || this.state.storeOpen || this.state.report) return;
+    if (this.state.radial) { this.closeRadial(); return; }
+    const { mx, my } = this.rel(e);
+    const t = this.tileAt(mx, my);
+    this.press = { x: e.clientX, y: e.clientY, t0: performance.now(), tile: t, moved: false, ptype: e.pointerType };
+    clearTimeout(this._hold);
+    if (t) this._hold = setTimeout(() => this.openRadial(t), this.holdMs());
+    e.preventDefault();
+  }
+
+  pointerMove(e) {
+    if (!e.isPrimary) return;
+    const rad = this.state.radial;
+    if (rad && this.press) {
+      const rect = this.canvas.getBoundingClientRect();
+      const dx = e.clientX - (rect.left + rad.x), dy = e.clientY - (rect.top + rad.y);
+      const d = Math.hypot(dx, dy);
+      let hi = null;
+      if (d < 46) hi = 'center';
+      else if (d <= 175 && rad.verbs.ring.length) {
+        const ang = Math.atan2(dy, dx);
+        const n = rad.verbs.ring.length;
+        let best = 0, bd = 99;
+        for (let i = 0; i < n; i++) {
+          const a = -Math.PI / 2 + i * 2 * Math.PI / n;
+          const df = Math.abs(Math.atan2(Math.sin(ang - a), Math.cos(ang - a)));
+          if (df < bd) { bd = df; best = i; }
+        }
+        hi = best;
+      }
+      if (hi !== rad.hi) {
+        rad.hi = hi;
+        if (navigator.vibrate) navigator.vibrate(4);
+        this.forceUpdate();
+      }
+      return;
+    }
+    if (this.press) {
+      const d = Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y);
+      if (d > 14) { this.press.moved = true; clearTimeout(this._hold); }
+      return;
+    }
+    if (e.pointerType === 'mouse' && e.target === this.canvas && this.state.phase === 'day') {
+      const { mx, my } = this.rel(e);
+      const t = this.tileAt(mx, my);
+      if (t) {
+        const key = t.r + '-' + t.c;
+        if (this.hovKey !== key) {
+          this.hovKey = key;
+          const nm = this.nameFor(t);
+          this.setState({ hover: { name: nm[0], sub: nm[1], x: t.cx, y: t.cy } });
+        }
+      } else if (this.state.hover) { this.hovKey = null; this.setState({ hover: null }); }
+    } else if (e.pointerType === 'mouse' && e.target !== this.canvas && this.state.hover && !this._hovT) {
+      this.hovKey = null; this.setState({ hover: null });
+    }
+  }
+
+  pointerUp(e) {
+    if (!e.isPrimary) return;
+    clearTimeout(this._hold);
+    const rad = this.state.radial;
+    if (rad && this.press) {
+      const dt = performance.now() - (rad.openedAt || 0);
+      if (rad.hi === 'center' && dt < 280) { rad.sticky = true; this.forceUpdate(); }
+      else this.commitRadial();
+    } else if (!rad && this.press && !this.press.moved && this.press.tile && performance.now() - this.press.t0 < this.holdMs()) {
+      this.quickTap(this.press.tile, this.press.ptype);
+    }
+    this.press = null;
+  }
+  pointerCancel() { clearTimeout(this._hold); this.press = null; }
+
+  openRadial(t) {
+    if (this.state.phase !== 'day') return;
+    const vs = this.verbsFor(t);
+    if (!vs.primary && !vs.ring.length) return;
+    if (navigator.vibrate) navigator.vibrate(8);
+    const cl = (v, a, b) => Math.max(a, Math.min(b, v));
+    const x = cl(t.cx, 150, Math.max(150, this.cssW - 150));
+    const y = cl(t.cy + this.QH, 205, Math.max(205, this.cssH - 175));
+    this.hovKey = null;
+    this.setState({ radial: { r: t.r, c: t.c, x, y, hi: 'center', sticky: false, openedAt: performance.now(), verbs: vs }, hover: null, hintDone: true });
+  }
+  closeRadial() { if (this.state.radial) this.setState({ radial: null }); }
+  commitRadial() {
+    const rad = this.state.radial; if (!rad) return;
+    const t = this.tileByRC(rad.r, rad.c);
+    let v = null;
+    if (rad.hi === 'center') v = rad.verbs.primary;
+    else if (typeof rad.hi === 'number') v = rad.verbs.ring[rad.hi];
+    this.setState({ radial: null });
+    if (v && t) this.runVerb(v, t);
+  }
+
+  quickTap(t, ptype) {
+    if (t.structure === 'sprinkler') { this._covTile = [t.r, t.c]; this._covUntil = performance.now() + 1600; }
+    const vs = this.verbsFor(t);
+    if (vs.primary) this.runVerb(vs.primary, t);
+    const nm = this.nameFor(t);
+    this.setState({ hover: { name: nm[0], sub: nm[1], x: t.cx, y: t.cy } });
+    clearTimeout(this._hovT); this._hovT = null;
+    if (ptype !== 'mouse') this._hovT = setTimeout(() => { this._hovT = null; this.setState({ hover: null }); }, 1500);
+  }
+
+  runVerb(v, t) {
+    if (v.disabled) { this.toast(v.reason || 'Not just yet', 'bad'); this.nudge(t); this.forceUpdate(); return; }
+    v.run();
+    this.forceUpdate();
+  }
+
+  // ---------- verbs ----------
+  verbsFor(t) {
+    const st = this.state; const coins = st.coins;
+    const mk = (id, label, color, run, opt) => Object.assign({ id, label, color, run }, opt || {});
+    const ring = []; let primary = null;
+    const short = (n) => coins < n;
+    if (t.kind === 'grass') {
+      primary = mk('till', 'Till', '#c69c6d', () => this.doTill(t));
+      for (const key of ['flower', 'pond', 'rock']) {
+        const ld = this.LAND[key];
+        ring.push(mk(key, ld.name, ld.color, () => this.doLand(t, key), { cost: ld.cost + 'c', disabled: short(ld.cost), reason: 'Not enough coins' }));
+      }
+    } else if (t.kind === 'flower') {
+      primary = mk('admire', 'Admire', '#f2a9c4', () => this.doAdmire(t));
+      ring.push(mk('rewild', 'Clear', '#9ccb6e', () => this.doRewild(t)));
+    } else if (t.kind === 'pond') {
+      const ok = t.stock > 0;
+      primary = mk('cast', 'Fish', '#6cc3de', () => this.doCast(t), { disabled: !ok, reason: 'Fished out — restocks overnight' });
+    } else if (t.kind === 'rock') {
+      const ok = t.charges > 0;
+      primary = mk('mine', 'Mine', '#b7ad93', () => this.doMine(t), { disabled: !ok, reason: 'The rock is resting — back at sunrise' });
+    } else if (t.kind === 'tilled') {
+      if (!t.crop) {
+        const last = st.unlocked[st.lastCrop] ? st.lastCrop : 'carrot';
+        const lc = this.CROPS[last];
+        primary = mk('plant-' + last, lc.name, lc.color, () => this.doPlant(t, last), { cost: lc.cost + 'c', disabled: short(lc.cost), reason: 'Not enough coins' });
+        for (const key of Object.keys(this.CROPS)) {
+          if (!st.unlocked[key]) continue;
+          const cd = this.CROPS[key];
+          ring.push(mk('plant-' + key, cd.name, cd.color, () => this.doPlant(t, key), { cost: cd.cost + 'c', disabled: short(cd.cost), reason: 'Not enough coins' }));
+        }
+        if (!t.structure) {
+          for (const key of ['sprinkler', 'scarecrow']) {
+            const sd = this.STRUCT[key];
+            ring.push(mk(key, sd.name, sd.color, () => this.doStruct(t, key), { cost: sd.cost + 'c', disabled: short(sd.cost), reason: 'Not enough coins' }));
+          }
+        } else {
+          ring.push(mk('unstruct', 'Remove ' + this.STRUCT[t.structure].name, '#a08a63', () => this.doRemoveStruct(t)));
+        }
+        ring.push(mk('rewild', 'Re-wild', '#9ccb6e', () => this.doRewild(t)));
+      } else if (t.wilted) {
+        primary = mk('clear', 'Clear', '#a08a63', () => this.doClear(t));
+      } else if (t.stage >= 3) {
+        primary = mk('harvest', 'Harvest', '#f7c948', () => this.doHarvest(t));
+        ring.push(mk('uproot', 'Uproot', '#e07a5f', () => this.doUproot(t)));
+      } else {
+        const wet = t.watered || this.coveredBy(t);
+        const feed = mk('feed', 'Feed', '#ffbe66', () => this.doFeed(t), { cost: '8c', disabled: short(8), reason: 'Feed costs 8 coins' });
+        if (wet) { primary = feed; }
+        else { primary = mk('water', 'Water', '#6cc3de', () => this.doWater(t)); ring.push(feed); }
+        ring.push(mk('uproot', 'Uproot', '#e07a5f', () => this.doUproot(t)));
+        if (t.structure) ring.push(mk('unstruct', 'Remove ' + this.STRUCT[t.structure].name, '#a08a63', () => this.doRemoveStruct(t)));
+      }
+    }
+    return { primary, ring };
+  }
+
+  spend(n) {
+    if (this.state.energy < n) { this.toast('Out of energy — rest for the night', 'bad'); this.pulseSleep(); return false; }
+    this.setState(s => ({ energy: s.energy - n }));
+    return true;
+  }
+  pulseSleep() { this._sleepPulse = performance.now(); this.forceUpdate(); }
+  markSeen(key) { if (!key || this.state.seen[key]) return; this.setState(s => ({ seen: Object.assign({}, s.seen, { [key]: 1 }) })); }
+
+  doTill(t) {
+    if (!this.spend(1)) return;
+    t.kind = 'tilled'; t.crop = null; t.stage = 0; t.watered = false; t.wilted = false;
+    this.pop(t); this.burst(t.cx, t.cy + this.QH, '#c9a56f', 12, 70); this.markSeen('plot');
+    this.toast('Tilled — ready to plant', 'ok');
+  }
+  doLand(t, key) {
+    const ld = this.LAND[key];
+    if (this.state.coins < ld.cost) { this.toast('Not enough coins', 'bad'); return; }
+    if (!this.spend(1)) return;
+    this.setState(s => ({ coins: s.coins - ld.cost }));
+    t.kind = ld.kind; t.crop = null; t.stage = 0; t.watered = false; t.wilted = false; t.structure = null;
+    if (ld.kind === 'pond') t.stock = this.maxStock();
+    if (ld.kind === 'rock') t.charges = this.maxCharges();
+    t.placeT = this._lt; t.placeDone = false;
+    this.markSeen(key);
+    this.floatText(t.cx, t.cy - 8, '-' + ld.cost, 'coin'); this.addShake(4); this.toast('Placed ' + ld.name, 'ok');
+  }
+  doPlant(t, key) {
+    const cd = this.CROPS[key];
+    if (this.state.coins < cd.cost) { this.toast('Not enough coins', 'bad'); return; }
+    if (!this.spend(1)) return;
+    this.setState(s => ({ coins: s.coins - cd.cost, lastCrop: key }));
+    t.crop = key; t.stage = 0; t.watered = false; t.wilted = false;
+    this.markSeen(key);
+    this.pop(t); this.burst(t.cx, t.cy + this.QH - 6, cd.leaf, 8); this.floatText(t.cx, t.cy - 6, '-' + cd.cost, 'coin');
+    this.toast('Planted ' + cd.name, 'ok');
+  }
+  doWater(t) {
+    if (t.watered) { this.nudge(t); return; }
+    if (!this.spend(1)) return;
+    t.watered = true; this.pop(t); this.splash(t.cx, t.cy + this.QH);
+    this.toast('Watered · grows tonight', 'ok');
+  }
+  doFeed(t) {
+    if (this.state.coins < 8) { this.toast('Feed costs 8 coins', 'bad'); return; }
+    if (!this.spend(1)) return;
+    this.setState(s => ({ coins: s.coins - 8 }));
+    t.stage = Math.min(3, t.stage + this.feedStages());
+    this.pop(t); this.burst(t.cx, t.cy + this.QH - 8, '#aadd85', 12, 80); this.floatText(t.cx, t.cy - 8, '-8', 'coin');
+    this.toast(t.stage >= 3 ? 'Fed — ripe already!' : 'Fed — it shot right up', 'ok');
+  }
+  doHarvest(t) {
+    const cd = this.CROPS[t.crop];
+    const gain = Math.round(cd.sell * this.state.bloom);
+    this.setState(s => ({ coins: s.coins + gain }));
+    t.crop = null; t.stage = 0; t.watered = false;
+    this.pop(t); this.burst(t.cx, t.cy + this.QH - 8, cd.color, 16, 90); this.coinBurst(t.cx, t.cy + this.QH - 10);
+    this.floatText(t.cx, t.cy - 10, '+' + gain, 'coinBig'); this.addShake(3);
+    this.markSeen('coin');
+  }
+  doClear(t) {
+    if (!this.spend(1)) return;
+    t.crop = null; t.wilted = false; t.stage = 0;
+    this.pop(t); this.burst(t.cx, t.cy + this.QH, '#a08a63', 10);
+    this.toast('Cleared — the soil is fine', 'ok');
+  }
+  doUproot(t) {
+    if (!this.spend(1)) return;
+    t.crop = null; t.stage = 0; t.watered = false; t.wilted = false;
+    this.pop(t); this.burst(t.cx, t.cy + this.QH, '#9a8763', 10);
+    this.toast('Uprooted', 'ok');
+  }
+  doRewild(t) {
+    if (!this.spend(1)) return;
+    t.kind = 'grass'; t.crop = null; t.stage = 0; t.watered = false; t.wilted = false; t.structure = null;
+    this.pop(t); this.burst(t.cx, t.cy + this.QH, '#9ccb6e', 12);
+    this.toast('Back to wild grass', 'ok');
+  }
+  doStruct(t, key) {
+    const sd = this.STRUCT[key];
+    if (this.state.coins < sd.cost) { this.toast('Not enough coins', 'bad'); return; }
+    if (!this.spend(1)) return;
+    this.setState(s => ({ coins: s.coins - sd.cost }));
+    t.structure = key; t.placeT = this._lt; t.placeDone = false;
+    this.markSeen(key);
+    this.floatText(t.cx, t.cy - 8, '-' + sd.cost, 'coin'); this.addShake(3);
+    if (key === 'sprinkler') { this._covTile = [t.r, t.c]; this._covUntil = performance.now() + 1800; this.toast('Sprinkler waters this plus its neighbours', 'ok'); }
+    else this.toast('Built ' + sd.name, 'ok');
+  }
+  doRemoveStruct(t) {
+    const name = this.STRUCT[t.structure].name;
+    t.structure = null; this.pop(t);
+    this.toast('Removed ' + name, 'ok');
+  }
+  doAdmire(t) {
+    this.pop(t);
+    this.burst(t.cx, t.cy + this.QH - 10, '#f2a9c4', 8, 50);
+    this.toast('The bees approve', 'ok');
+  }
+  doCast(t) {
+    if (t.stock <= 0) { this.nudge(t); return; }
+    if (!this.spend(1)) return;
+    const gain = 12 + Math.floor(Math.random() * 20);
+    t.stock--;
+    this.setState(s => ({ coins: s.coins + gain }));
+    this.markSeen('fish'); this.markSeen('coin');
+    this.pop(t); this.splash(t.cx, t.cy + this.QH); this.coinBurst(t.cx, t.cy + this.QH - 8);
+    this.floatText(t.cx, t.cy - 8, '+' + gain, 'coinBig'); this.addShake(2);
+    this.toast(t.stock === 0 ? 'Caught the last one — restocks overnight' : 'Caught a fish!', 'ok');
+  }
+  doMine(t) {
+    if (t.charges <= 0) { this.nudge(t); return; }
+    if (!this.spend(1)) return;
+    const gain = 8 + Math.floor(Math.random() * 12);
+    const gem = Math.random() < 0.22 ? 1 : 0;
+    t.charges--;
+    this.setState(s => ({ coins: s.coins + gain, gems: s.gems + gem }));
+    this.markSeen('ore'); this.markSeen('coin'); if (gem) this.markSeen('gem');
+    this.pop(t); this.burst(t.cx, t.cy + this.QH - 6, '#cfc6ac', 12, 80); this.coinBurst(t.cx, t.cy + this.QH - 8);
+    this.floatText(t.cx, t.cy - 8, '+' + gain, 'coinBig'); this.addShake(3);
+    this.toast(gem ? 'Struck a gem! +1' : (t.charges === 0 ? 'Mined out — it needs a rest' : 'Mined ore'), 'ok');
+  }
+
+  nudge(t) { t.nudgeT = this._lt; }
+  pop(t) { t.popT = this._lt; }
+  addShake(m) { if (this.juiceOn()) this.shake = Math.max(this.shake, m); }
+
+  floatText(x, y, text, style) { this.fx.push({ type: 'text', x, y, vy: -34, text, style, life: 1.1, age: 0 }); }
+  toast(text, kind) {
+    const id = ++this._tid;
+    this.setState(s => ({ toasts: [...s.toasts.slice(-2), { id, text, kind }] }));
+    setTimeout(() => this.setState(s => ({ toasts: s.toasts.filter(t => t.id !== id) })), 2100);
+  }
+  burst(x, y, color, n, spd) {
+    if (!this.juiceOn()) n = Math.ceil(n / 3);
+    spd = spd || 60;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * 6.28, v = spd * (0.4 + Math.random() * 0.7);
+      this.fx.push({ type: 'p', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, grav: 240, color, size: 2 + Math.random() * 3 * this.sc, life: 0.5 + Math.random() * 0.4, age: 0 });
+    }
+  }
+  splash(x, y) {
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.4, v = 50 + Math.random() * 50;
+      this.fx.push({ type: 'p', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, grav: 300, color: Math.random() > 0.5 ? '#6cc3de' : '#c6eef7', size: 2 + Math.random() * 2 * this.sc, life: 0.5 + Math.random() * 0.3, age: 0 });
+    }
+  }
+  coinBurst(x, y) {
+    const n = this.juiceOn() ? 10 : 4;
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.8, v = 60 + Math.random() * 70;
+      this.fx.push({ type: 'coin', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, grav: 320, size: 4 * this.sc, life: 0.7 + Math.random() * 0.3, age: 0 });
+    }
+  }
+
+  onSleep() {
+    if (this.state.phase !== 'day') return;
+    this.setState({ phase: 'night', radial: null, hover: null, night: { title: 'Night ' + this.state.day, sub: 'Watered crops are growing…' } });
+    this._t1 = setTimeout(() => {
+      const rep = { grew: 0, wilted: 0, restock: false, rested: false };
+      for (const t of this.tiles) {
+        if (t.kind === 'tilled' && t.crop && !t.wilted && t.stage < 3) {
+          const wet = t.watered || this.coveredBy(t);
+          if (wet) { t.stage++; rep.grew++; }
+          else if (t.structure === 'scarecrow') { /* protected — survives, no growth */ }
+          else { t.wilted = true; rep.wilted++; }
+        }
+        t.watered = false;
+        if (t.kind === 'pond' && t.stock < this.maxStock()) { t.stock = this.maxStock(); rep.restock = true; }
+        if (t.kind === 'rock' && t.charges < this.maxCharges()) { t.charges = this.maxCharges(); rep.rested = true; }
+      }
+      this._rep = rep;
+      const parts = [];
+      if (rep.grew) parts.push(rep.grew + ' grew');
+      if (rep.wilted) parts.push(rep.wilted + ' wilted');
+      this.setState(s => ({
+        day: s.day + 1,
+        energy: s.maxEnergy,
+        bloom: Math.round((s.bloom + 0.05) * 100) / 100,
+        night: { title: 'Sunrise', sub: parts.length ? parts.join(' · ') : 'A quiet night on the farm' },
+      }));
+      this.forceUpdate();
+    }, 1400);
+    this._t2 = setTimeout(() => {
+      this.setState({ phase: 'day', report: this._rep || {} });
+    }, 3100);
+  }
+
+  // ---------- drawing ----------
+  r(x, y, w, h, col) { const c = this.ctx; c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
+  bounce(p) { if (p < 1 / 2.75) return 7.5625 * p * p; if (p < 2 / 2.75) { p -= 1.5 / 2.75; return 7.5625 * p * p + 0.75; } if (p < 2.5 / 2.75) { p -= 2.25 / 2.75; return 7.5625 * p * p + 0.9375; } p -= 2.625 / 2.75; return 7.5625 * p * p + 0.984375; }
+
+  currentCoverage() {
+    const rad = this.state.radial;
+    if (rad) {
+      let v = null;
+      if (rad.hi === 'center') v = rad.verbs.primary;
+      else if (typeof rad.hi === 'number') v = rad.verbs.ring[rad.hi];
+      if (v && v.id === 'sprinkler') return this.plusSet(rad.r, rad.c);
+      const t = this.tileByRC(rad.r, rad.c);
+      if (t && t.structure === 'sprinkler') return this.plusSet(rad.r, rad.c);
+    }
+    if (this._covTile && performance.now() < this._covUntil) return this.plusSet(this._covTile[0], this._covTile[1]);
+    return null;
+  }
+
+  draw(time, dt) {
+    const c = this.ctx; if (!c) return;
+    c.clearRect(0, 0, this.cssW, this.cssH);
+    const g = c.createRadialGradient(this.cssW * 0.82, this.cssH * 0.1, 10, this.cssW * 0.82, this.cssH * 0.1, this.cssW * 0.5);
+    g.addColorStop(0, 'rgba(255,248,215,.5)'); g.addColorStop(1, 'rgba(255,248,215,0)');
+    c.fillStyle = g; c.fillRect(0, 0, this.cssW, this.cssH);
+
+    c.save();
+    if (this.shake > 0.1) { c.translate((Math.random() * 2 - 1) * this.shake, (Math.random() * 2 - 1) * this.shake); this.shake = Math.max(0, this.shake - dt * 34); }
+
+    for (const p of this.amb) {
+      const px = p.x * this.cssW, py = this.cssH - ((p.y + time * p.sp) % 1) * this.cssH;
+      const a = 0.18 + 0.2 * Math.sin(time * 2 + p.ph);
+      c.fillStyle = 'rgba(255,244,200,' + a.toFixed(2) + ')'; c.fillRect(Math.round(px), Math.round(py), 3, 3);
+    }
+    const order = [...this.tiles].sort((a, b) => (a.r + a.c) - (b.r + b.c));
+    for (const t of order) this.drawTile(t, time);
+
+    const cov = this.currentCoverage();
+    if (cov) for (const t of this.tiles) if (cov.has(t.r + '-' + t.c)) this.drawCoverage(t, time);
+
+    for (let i = this.fx.length - 1; i >= 0; i--) {
+      const f = this.fx[i]; f.age += dt;
+      if (f.age >= f.life) { this.fx.splice(i, 1); continue; }
+      const k = 1 - f.age / f.life;
+      if (f.type === 'text') {
+        f.y += f.vy * dt;
+        c.globalAlpha = Math.min(1, k * 1.6);
+        c.font = (f.style === 'coinBig' ? 22 : 15) * this.sc + "px 'Pixelify Sans', monospace";
+        c.textAlign = 'center';
+        c.fillStyle = f.style === 'bad' ? '#d9563f' : (f.style && f.style.indexOf('coin') === 0 ? '#f5a623' : '#5a8f30');
+        c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.85)';
+        c.strokeText(f.text, f.x, f.y); c.fillText(f.text, f.x, f.y);
+        c.globalAlpha = 1; c.textAlign = 'left';
+      } else if (f.type === 'coin') {
+        f.vy += f.grav * dt; f.x += f.vx * dt; f.y += f.vy * dt;
+        c.globalAlpha = k;
+        c.fillStyle = '#f7c948'; c.fillRect(Math.round(f.x), Math.round(f.y), Math.round(f.size), Math.round(f.size));
+        c.fillStyle = '#fce9b0'; c.fillRect(Math.round(f.x), Math.round(f.y), Math.round(f.size), 1);
+        c.globalAlpha = 1;
+      } else {
+        f.vy += f.grav * dt; f.x += f.vx * dt; f.y += f.vy * dt;
+        c.globalAlpha = k; c.fillStyle = f.color;
+        c.fillRect(Math.round(f.x), Math.round(f.y), Math.round(f.size), Math.round(f.size)); c.globalAlpha = 1;
+      }
+    }
+    c.restore();
+  }
+
+  grassTone(k) {
+    if (k < 0.2) return '#649a41';
+    if (k < 0.45) return '#7cae4f';
+    if (k < 0.72) return '#8fbf63';
+    if (k < 0.9) return '#aadd85';
+    return '#c2e39a';
+  }
+
+  drawTile(t, time) {
+    const c = this.ctx, HW = this.HW, QH = this.QH, D = this.D, cx = t.cx, sc = this.sc;
+    let oy = t.cy;
+    const rad = this.state.radial;
+    const hovered = (this.hovKey === (t.r + '-' + t.c) && this.state.phase === 'day' && !rad) || (rad && rad.r === t.r && rad.c === t.c);
+    if (hovered) oy -= 5 * sc;
+    let scale = 1;
+    if (t.nudgeT != null) { const p = (this._lt - t.nudgeT) / 0.22; if (p < 1) scale *= 1 - Math.sin(p * Math.PI) * 0.05; }
+    if (t.popT != null) { const p = (this._lt - t.popT) / 0.28; if (p < 1) scale *= 1 + Math.sin(p * Math.PI) * 0.13; }
+    if (t.placeT != null) {
+      const p = (time - t.placeT) / 0.6;
+      if (p < 1) { const b = this.bounce(p); oy -= (1 - b) * 120 * sc; scale *= 0.7 + 0.3 * b; }
+      else if (!t.placeDone) { t.placeDone = true; this.burst(cx, t.cy + QH, '#c9a56f', 16, 80); this.addShake(3); }
+    }
+
+    c.save();
+    const pivx = cx, pivy = oy + QH * 2;
+    c.translate(pivx, pivy); c.scale(scale, scale); c.translate(-pivx, -pivy);
+
+    const top = [cx, oy], right = [cx + HW, oy + QH], bot = [cx, oy + QH * 2], left = [cx - HW, oy + QH];
+
+    // side faces — warm plum-brown earth
+    c.fillStyle = '#8a5566';
+    c.beginPath(); c.moveTo(bot[0], bot[1]); c.lineTo(right[0], right[1]); c.lineTo(right[0], right[1] + D); c.lineTo(bot[0], bot[1] + D); c.closePath(); c.fill();
+    c.fillStyle = '#a87786';
+    c.beginPath(); c.moveTo(bot[0], bot[1]); c.lineTo(left[0], left[1]); c.lineTo(left[0], left[1] + D); c.lineTo(bot[0], bot[1] + D); c.closePath(); c.fill();
+    // face speckles
+    c.fillStyle = 'rgba(60,30,45,.18)';
+    for (let i = 0; i < 5; i++) {
+      const p = t.spk[i];
+      const u = p[0], side = p[2] > 0.5;
+      const fx = side ? bot[0] + u * HW : left[0] + u * HW;
+      const fy = (side ? bot[1] - u * QH : left[1] + u * QH) + D * (0.35 + p[1] * 0.45);
+      c.fillRect(Math.round(fx), Math.round(fy), 3, 2);
+    }
+    // bottom rim
+    c.fillStyle = '#6e3f4f'; c.fillRect(Math.round(left[0]), Math.round(left[1] + D - 2), Math.round(HW * 2), 3);
+
+    // top face
+    const watered = t.kind === 'tilled' && t.crop && t.watered && !t.wilted;
+    const grassTop = (t.kind === 'grass' || t.kind === 'flower' || t.kind === 'rock');
+    let base = '#9ccb6e';
+    if (t.kind === 'tilled') base = watered ? '#9c7146' : '#c69c6d';
+    else if (t.kind === 'pond') base = '#e6d3a3';
+    c.fillStyle = base;
+    c.beginPath(); c.moveTo(top[0], top[1]); c.lineTo(right[0], right[1]); c.lineTo(bot[0], bot[1]); c.lineTo(left[0], left[1]); c.closePath(); c.fill();
+    c.save(); c.clip();
+
+    if (grassTop) {
+      // clumped grass texture
+      const s3 = Math.max(2, Math.round(3 * sc));
+      for (const [a, b, k] of t.spk) {
+        const sx = cx + (a - b) * HW, sy = oy + (a + b) * QH;
+        c.fillStyle = this.grassTone(k);
+        c.fillRect(Math.round(sx), Math.round(sy), s3, Math.max(2, Math.round(s3 * 0.7)));
+        if (k > 0.35 && k < 0.7) { c.fillStyle = '#649a41'; c.fillRect(Math.round(sx + s3 * 0.3), Math.round(sy - 2), Math.max(1, Math.round(1.5 * sc)), 2); }
+      }
+    } else if (t.kind === 'tilled') {
+      const dk = watered ? '#79593a' : '#a67c50', lt = watered ? '#b8905e' : '#dcbc90';
+      for (const [a, b, k] of t.spk) {
+        const sx = cx + (a - b) * HW, sy = oy + (a + b) * QH;
+        c.fillStyle = k > 0.5 ? lt : dk;
+        c.fillRect(Math.round(sx), Math.round(sy), 3, 2);
+      }
+      c.strokeStyle = 'rgba(90,60,30,.32)'; c.lineWidth = 2;
+      for (let i = 1; i < 4; i++) { const f = i / 4; c.beginPath(); c.moveTo(cx - HW + f * HW, oy + f * QH); c.lineTo(cx + f * HW, oy + QH + f * QH); c.stroke(); }
+      if (watered) {
+        for (let i = 0; i < 3; i++) {
+          const p = t.spk[i + 5];
+          const gx = cx + (p[0] - p[1]) * HW, gy = oy + (p[0] + p[1]) * QH;
+          c.globalAlpha = 0.4 + 0.4 * Math.sin(time * 3 + i * 2);
+          c.fillStyle = '#cfe8f2'; c.fillRect(Math.round(gx), Math.round(gy), 2, 2);
+          c.globalAlpha = 1;
+        }
+      }
+    } else if (t.kind === 'pond') {
+      for (const [a, b, k] of t.spk) {
+        const sx = cx + (a - b) * HW, sy = oy + (a + b) * QH;
+        c.fillStyle = k > 0.5 ? '#f0e2bb' : '#d4bf8c';
+        c.fillRect(Math.round(sx), Math.round(sy), 3, 2);
+      }
+    }
+
+    // edge shading inside top face
+    c.strokeStyle = 'rgba(255,255,255,.16)'; c.lineWidth = 4;
+    c.beginPath(); c.moveTo(left[0], left[1]); c.lineTo(top[0], top[1]); c.lineTo(right[0], right[1]); c.stroke();
+    c.strokeStyle = 'rgba(50,30,20,.10)'; c.lineWidth = 5;
+    c.beginPath(); c.moveTo(left[0], left[1]); c.lineTo(bot[0], bot[1]); c.lineTo(right[0], right[1]); c.stroke();
+    c.restore();
+
+    // pond inner water
+    if (t.kind === 'pond') this.drawPond(t, cx, oy, time);
+
+    // fringe overhanging the edges
+    if (grassTop || t.kind === 'tilled') {
+      for (const f of t.fringe) {
+        let fx, fy;
+        if (f.side === 0) { fx = left[0] + f.u * HW; fy = left[1] + f.u * QH; }
+        else { fx = bot[0] + f.u * HW; fy = bot[1] - f.u * QH; }
+        c.fillStyle = grassTop ? (f.k > 0.5 ? '#649a41' : '#7cae4f') : (f.k > 0.5 ? '#a67c50' : '#8f6a44');
+        c.fillRect(Math.round(fx), Math.round(fy), Math.max(2, Math.round(2.5 * sc)), Math.round((f.len + 2) * sc));
+      }
+    }
+
+    if (t.kind === 'rock') this.drawRock(t, cx, oy, time);
+    else if (t.kind === 'flower') { const pts = [[0.3, 0.38], [0.62, 0.66], [0.5, 0.24], [0.72, 0.4], [0.34, 0.68]]; for (let i = 0; i < pts.length; i++) this.drawFlower(cx + (pts[i][0] - pts[i][1]) * HW, oy + (pts[i][0] + pts[i][1]) * QH, i); }
+    else if (t.kind === 'tilled' && t.crop) {
+      for (const [a, b, ph] of t.spots) this.drawPlant(cx + (a - b) * HW, oy + (a + b) * QH, t.crop, t.stage, t.wilted, time, ph);
+      if (t.stage >= 3 && !t.wilted) { const bob = Math.sin(time * 3) * 2; this.drawSparkle(cx, oy - 6 + bob, time); }
+      if (!t.wilted && t.stage < 3 && !t.watered && !this.coveredBy(t)) {
+        // thirsty pip
+        const bob = Math.sin(time * 4) * 1.5;
+        c.globalAlpha = 0.55 + 0.4 * Math.sin(time * 4);
+        this.r(cx - 2 * sc, oy - 12 * sc + bob, 4 * sc, 5 * sc, '#6cc3de');
+        this.r(cx - 1 * sc, oy - 15 * sc + bob, 2 * sc, 4 * sc, '#6cc3de');
+        this.r(cx - 1 * sc, oy - 11 * sc + bob, 2 * sc, 2 * sc, '#c6eef7');
+        c.globalAlpha = 1;
+      }
+    }
+    if (t.structure) this.drawStructure(cx, oy, t.structure, time);
+
+    if (hovered) {
+      c.strokeStyle = 'rgba(255,255,255,.92)'; c.lineWidth = 2 + Math.sin(time * 6) * 0.6;
+      c.beginPath(); c.moveTo(top[0], top[1]); c.lineTo(right[0], right[1]); c.lineTo(bot[0], bot[1]); c.lineTo(left[0], left[1]); c.closePath(); c.stroke();
+    }
+    c.restore();
+  }
+
+  drawCoverage(t, time) {
+    const c = this.ctx, HW = this.HW, QH = this.QH, cx = t.cx, oy = t.cy;
+    const a = 0.2 + 0.08 * Math.sin(time * 3);
+    c.fillStyle = 'rgba(108,195,222,' + a.toFixed(2) + ')';
+    c.beginPath(); c.moveTo(cx, oy); c.lineTo(cx + HW, oy + QH); c.lineTo(cx, oy + QH * 2); c.lineTo(cx - HW, oy + QH); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(108,195,222,' + (0.55 + 0.3 * Math.sin(time * 3)).toFixed(2) + ')';
+    c.lineWidth = 2.5; c.stroke();
+    // drifting droplets
+    for (let i = 0; i < 2; i++) {
+      const ph = (time * 26 + i * 40 + (t.r * 3 + t.c) * 17) % 60;
+      const dx = (i === 0 ? -0.3 : 0.35) * HW * 0.6;
+      c.globalAlpha = Math.max(0, 1 - ph / 60);
+      c.fillStyle = '#6cc3de';
+      c.fillRect(Math.round(cx + dx), Math.round(oy + QH - 14 + ph * 0.35), 3, 4);
+      c.globalAlpha = 1;
+    }
+  }
+
+  drawPlant(px, py, crop, stage, wilted, time, ph) {
+    const c = this.ctx; const M = this.sc * 2.0;
+    c.save(); c.translate(px, py); c.scale(M, M);
+    const rr = (x, y, w, h, col) => this.r(x, y, w, h, col);
+    const cd = this.CROPS[crop];
+    if (wilted) { rr(0.5, -5, 1.5, 5, '#9a8763'); rr(-3, -2, 6, 2, '#8a7a52'); rr(1.5, -6, 3, 2, '#9a8763'); c.restore(); return; }
+    if (stage === 0) { rr(-2, -1, 4, 2, '#8f6a44'); rr(-1, -3, 2, 3, '#6cb04a'); rr(-2.5, -4, 5, 2, cd.leaf); c.restore(); return; }
+    const H = stage === 1 ? 6 : stage === 2 ? 10 : 13;
+    const sway = Math.sin(time * 2 + ph) * 1.2;
+    rr(-1 + sway, -H, 2.5, H, '#5f9a3e');
+    rr(-4 + sway, -H - 2, 8, 3, cd.leaf);
+    rr(-3 + sway, -H + 3, 6, 3, cd.leaf);
+    if (stage >= 2) rr(-2 + sway, -H + 6, 4, 2, cd.leaf);
+    if (stage >= 3) {
+      if (crop === 'carrot') { rr(-2, -1.5, 4, 4, cd.color); rr(-1.2, 2.5, 2.5, 2, '#e87b34'); rr(-1, -2.5, 2, 1.5, '#83c250'); }
+      else if (crop === 'wheat') { rr(-2.5 + sway, -H - 5, 5, 5, cd.color); rr(-1.5 + sway, -H - 6.5, 3, 2, '#f5e08a'); }
+      else { rr(-4.5 + sway, -H + 0.5, 4, 4, cd.color); rr(1.5 + sway, -H + 2.5, 4, 4, cd.color); rr(-3.8 + sway, -H + 1.2, 1.5, 1.5, 'rgba(255,255,255,.55)'); }
+    }
+    c.restore();
+  }
+  drawSparkle(cx, cy, time) {
+    const s = this.sc, a = 0.5 + 0.5 * Math.sin(time * 5);
+    this.ctx.globalAlpha = a;
+    this.r(cx - 1, cy - 4, 2, 8 * s, '#fff6c8'); this.r(cx - 4, cy - 1, 8 * s, 2, '#fff6c8');
+    this.ctx.globalAlpha = 1;
+  }
+  drawFlower(px, py, i) {
+    const c = this.ctx; const M = this.sc * 1.5; c.save(); c.translate(px, py); c.scale(M, M);
+    const rr = (x, y, w, h, col) => this.r(x, y, w, h, col);
+    const petals = i % 3 === 0 ? '#fffdf5' : (i % 3 === 1 ? '#f2a9c4' : '#c9a6ff');
+    rr(-0.7, 0.5, 1.4, 2.5, '#5f9a3e');
+    rr(-2, -2, 2, 2, petals); rr(1, -2, 2, 2, petals); rr(-2, 1, 2, 2, petals); rr(1, 1, 2, 2, petals);
+    rr(-0.5, -0.5, 2, 2, '#f7c948');
+    c.restore();
+  }
+  drawPond(t, cx, oy, time) {
+    const c = this.ctx, HW = this.HW, QH = this.QH, sc = this.sc;
+    const k = 0.72, cym = oy + QH;
+    c.fillStyle = '#8fd3e0';
+    c.beginPath(); c.moveTo(cx, cym - QH * k); c.lineTo(cx + HW * k, cym); c.lineTo(cx, cym + QH * k); c.lineTo(cx - HW * k, cym); c.closePath(); c.fill();
+    c.save(); c.clip();
+    // deep patches
+    c.fillStyle = '#68bad0';
+    for (let i = 0; i < 5; i++) { const p = t.spk[i + 4]; c.fillRect(Math.round(cx + (p[0] - p[1]) * HW * 0.6), Math.round(cym + (p[0] + p[1] - 1) * QH * 0.6), 6 * sc, 3 * sc); }
+    // light rim along top edges
+    c.strokeStyle = 'rgba(193,235,243,.9)'; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(cx - HW * k, cym); c.lineTo(cx, cym - QH * k); c.lineTo(cx + HW * k, cym); c.stroke();
+    // ripples
+    for (const [dx, dy, ph] of [[-14, -3, 0], [10, 2, 2], [-4, 7, 4]]) { const w = (5 + 2 * Math.sin(time * 2 + ph)) * sc; this.r(cx + dx * sc, cym + dy * sc, w, 1.6 * sc, 'rgba(255,255,255,.55)'); }
+    // stocked fish
+    for (let i = 0; i < t.stock; i++) {
+      const fxp = cx + Math.sin(time * 0.6 + i * 2.2) * (10 - i * 2) * sc + (i - 1) * 12 * sc;
+      const fyp = cym + (i - 1) * 4 * sc;
+      const rr = (x, y, w, h, col) => this.r(x, y, w * sc, h * sc, col);
+      rr(fxp - 3, fyp - 1.5, 6, 3, '#f0894a'); rr(fxp + 3, fyp - 2.5, 2.5, 2, '#f0894a'); rr(fxp + 3, fyp + 0.5, 2.5, 2, '#f0894a'); rr(fxp - 2, fyp - 1, 1.4, 1.4, '#3a2a1a');
+    }
+    c.restore();
+  }
+  drawRock(t, cx, oy, time) {
+    const c = this.ctx, sc = this.sc, QH = this.QH;
+    const rr = (x, y, w, h, col) => this.r(x, y, w * sc, h * sc, col);
+    const yb = oy + QH;
+    const dormant = t.charges <= 0;
+    const b1 = dormant ? '#87816e' : '#9a9078', b1t = dormant ? '#a59e88' : '#c1b89e', b1b = dormant ? '#6e6857' : '#7d745e';
+    rr(cx / sc - 13, yb / sc - 6, 14, 11, b1); rr(cx / sc - 13, yb / sc - 8, 14, 3, b1t); rr(cx / sc - 13, yb / sc + 3, 14, 2, b1b);
+    rr(cx / sc + 2, yb / sc - 2, 11, 8, dormant ? '#7e7867' : '#8f8670'); rr(cx / sc + 2, yb / sc - 4, 11, 3, dormant ? '#948d7a' : '#b3ab92');
+    if (!dormant) {
+      const a = 0.6 + 0.4 * Math.sin(time * 3);
+      c.globalAlpha = a;
+      rr(cx / sc - 8, yb / sc - 4, 2.5, 2.5, '#7fd3ff'); rr(cx / sc + 6, yb / sc - 1, 2.5, 2.5, '#c9a6ff'); rr(cx / sc - 3, yb / sc + 1, 2, 2, '#7fd3ff');
+      c.globalAlpha = 1;
+    } else {
+      // resting — crack + drowsy z's
+      rr(cx / sc - 7, yb / sc - 5, 1.5, 6, '#5f5a4b'); rr(cx / sc - 5.5, yb / sc - 2, 3, 1.5, '#5f5a4b');
+      const bob = Math.sin(time * 1.6) * 2;
+      c.globalAlpha = 0.5 + 0.3 * Math.sin(time * 1.6);
+      c.font = Math.round(11 * sc) + "px 'Pixelify Sans', monospace";
+      c.fillStyle = '#8a94a0'; c.textAlign = 'center';
+      c.fillText('z', cx + 10 * sc, yb - 18 * sc + bob);
+      c.fillText('z', cx + 16 * sc, yb - 26 * sc + bob * 1.4);
+      c.textAlign = 'left'; c.globalAlpha = 1;
+    }
+  }
+  drawStructure(cx, oy, kind, time) {
+    const c = this.ctx, QH = this.QH; const M = this.sc * 1.9; const yb = oy + QH;
+    c.save(); c.translate(cx + this.HW * 0.42, yb - QH * 0.35); c.scale(M, M);
+    const rr = (x, y, w, h, col) => this.r(x, y, w, h, col);
+    if (kind === 'sprinkler') {
+      rr(-1, -11, 2, 11, '#8a94a0'); rr(-2, -1, 4, 2, '#6b7480');
+      rr(-4, -13, 8, 3, '#aeb8c4'); rr(-4, -13, 8, 1, '#d6dde5');
+      const t2 = (time * 2.4) % 1;
+      rr(-7, -11 + t2 * 5, 1.6, 1.6, '#6cc3de'); rr(6, -11 + ((t2 + 0.5) % 1) * 5, 1.6, 1.6, '#6cc3de');
+    } else if (kind === 'scarecrow') {
+      rr(-0.7, -15, 1.6, 15, '#9a6a3b'); rr(-6, -11, 12, 1.8, '#9a6a3b');
+      rr(-3, -17, 6, 5, '#e0ba76'); rr(-3, -17, 6, 1.5, '#efd39a');
+      rr(-2, -15, 1.4, 1.4, '#3a2a1a'); rr(1, -15, 1.4, 1.4, '#3a2a1a');
+      rr(-3.5, -11, 7, 5, '#c25b4a'); rr(-3.5, -11, 7, 1.5, '#d97a68');
+      rr(-4.5, -18, 9, 2, '#b98a4a');
+    }
+    c.restore();
+  }
+
+  nameFor(t) {
+    if (t.kind === 'pond') return ['Fishing Pond', t.stock > 0 ? t.stock + (t.stock === 1 ? ' fish' : ' fish') + ' left today · tap to cast' : 'Fished out · restocks overnight'];
+    if (t.kind === 'rock') return ['Rocky Outcrop', t.charges > 0 ? t.charges + (t.charges === 1 ? ' strike' : ' strikes') + ' left · tap to mine' : 'Resting · recovers overnight'];
+    if (t.kind === 'flower') return ['Wildflowers', 'Pollinators love these'];
+    if (t.kind === 'grass') return ['Wild Grass', 'Tap to till · hold for more'];
+    if (t.kind === 'tilled') {
+      const st = t.structure ? ' · ' + this.STRUCT[t.structure].name : '';
+      if (!t.crop) return ['Tilled Soil' + st, 'Hold to pick a seed'];
+      const cd = this.CROPS[t.crop];
+      if (t.wilted) return [cd.name + ' (wilted)', 'Aw, it dried out — tap to clear'];
+      if (t.stage >= 3) return [cd.name + ' — ripe!' + st, 'Tap to harvest for ' + Math.round(cd.sell * this.state.bloom)];
+      const wet = t.watered || this.coveredBy(t);
+      return [cd.name + ' · stage ' + (t.stage + 1) + '/4' + st, this.coveredBy(t) ? 'Sprinkler keeps it watered' : (t.watered ? 'Watered · grows tonight' : 'Thirsty — tap to water')];
+    }
+    return ['Plot', ''];
+  }
+
+  renderVals() {
+    const st = this.state;
+    const notch = "clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));";
+    const notch4 = "clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));";
+
+    // tooltip
+    const hv = st.hover;
+    const w = this.cssW || 800;
+    const hoverStyle = hv ? ("position:absolute; z-index:15; left:" + Math.round(Math.max(8, Math.min(w - 216, hv.x - 104))) + "px; top:" + Math.round(Math.max(96, hv.y - 78)) + "px; width:208px; text-align:center; background:#fff8ec; box-shadow:inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a); padding:7px 12px; pointer-events:none; animation:fi-pop .14s ease-out;" + notch4) : "";
+
+    // radial
+    let radialOpen = false, radialSlices = [], scrimStyle = '', radialWrapStyle = '', radialTitle = '', radialTitleStyle = '', radialCenterStyle = '', radialCenterLabel = '', radialCenterCost = false, radialCenterGo = () => {};
+    const rad = st.radial;
+    if (rad) {
+      radialOpen = true;
+      const n = rad.verbs.ring.length;
+      const R = n > 5 ? 112 : 98;
+      scrimStyle = "position:absolute; inset:0; z-index:14; background:radial-gradient(circle at " + Math.round(rad.x) + "px " + Math.round(rad.y) + "px, rgba(32,27,69,.52), rgba(32,27,69,.26) 44%, rgba(32,27,69,.1) 75%);";
+      radialWrapStyle = "position:absolute; left:" + Math.round(rad.x) + "px; top:" + Math.round(rad.y) + "px; width:0; height:0; z-index:16; animation:fi-bloom .09s ease-out;";
+      const t = this.tileByRC(rad.r, rad.c);
+      radialTitle = t ? this.nameFor(t)[0] : '';
+      radialTitleStyle = "position:absolute; left:0; top:-" + (R + 62) + "px; transform:translateX(-50%); white-space:nowrap; font-family:'Pixelify Sans',monospace; font-size:14px; font-weight:600; color:#fff7ea; text-shadow:0 2px 0 rgba(32,27,69,.6); pointer-events:none;";
+      const p = rad.verbs.primary;
+      const cHi = rad.hi === 'center';
+      radialCenterLabel = p ? p.label : '';
+      radialCenterCost = p && p.cost ? p.cost : false;
+      const cDis = p && p.disabled;
+      radialCenterStyle = "position:absolute; left:0; top:0; transform:translate(-50%,-50%) scale(" + (cHi ? 1.1 : 1) + "); width:84px; height:84px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border:none; cursor:pointer; transition:transform .1s; color:#3a5c1f;" +
+        (cDis ? "background:#e3dcc8; color:#a29775; box-shadow:inset 0 0 0 3px #d4cbb0; opacity:.85;" :
+          (cHi ? "background:#ffe1a0; color:#8a5c14; box-shadow:inset 0 3px 0 rgba(255,255,255,.65), inset 0 -6px 0 rgba(150,100,20,.3), inset 0 0 0 3px #f0bd5e; filter:drop-shadow(0 5px 0 #d99f3e) drop-shadow(0 8px 8px rgba(120,80,20,.3));"
+            : "background:#aadd85; box-shadow:inset 0 3px 0 rgba(255,255,255,.45), inset 0 -6px 0 rgba(40,80,20,.28), inset 0 0 0 3px #bfe89b; filter:drop-shadow(0 5px 0 #7fb35c) drop-shadow(0 8px 8px rgba(60,90,30,.28));")) +
+        "clip-path:polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px));";
+      radialCenterGo = () => { if (this.state.radial) { const tt = this.tileByRC(rad.r, rad.c); this.setState({ radial: null }); if (p && tt) this.runVerb(p, tt); } };
+      radialSlices = rad.verbs.ring.map((v, i) => {
+        const a = -Math.PI / 2 + i * 2 * Math.PI / n;
+        const x = Math.round(R * Math.cos(a)), y = Math.round(R * Math.sin(a));
+        const hi = rad.hi === i;
+        const style = "position:absolute; left:" + x + "px; top:" + y + "px; transform:translate(-50%,-50%) scale(" + (hi ? 1.14 : 1) + "); width:66px; min-height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:6px 4px; border:none; cursor:pointer; transition:transform .1s; color:#6b5236;" +
+          (v.disabled ? "background:#efe7d4; opacity:.62; box-shadow:inset 0 0 0 3px #ddd2b8;" :
+            (hi ? "background:#ffe1a0; color:#8a5c14; box-shadow:inset 0 3px 0 rgba(255,255,255,.65), inset 0 -5px 0 rgba(150,100,20,.3), inset 0 0 0 3px #f0bd5e; filter:drop-shadow(0 4px 0 #d99f3e) drop-shadow(0 7px 7px rgba(120,80,20,.3));"
+              : "background:#fff7ea; box-shadow:inset 0 3px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(150,110,30,.16), inset 0 0 0 3px #f3d698; filter:drop-shadow(0 4px 0 #ecc98a) drop-shadow(0 6px 6px rgba(150,110,30,.22));")) +
+          "clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));";
+        const iconStyle = "width:18px; height:18px; background:" + v.color + "; box-shadow:inset 0 -3px 0 rgba(0,0,0,.16), inset 0 0 0 2px rgba(255,255,255,.35);" + (v.disabled ? "filter:grayscale(.5);" : "") + "clip-path:polygon(0 4px,4px 4px,4px 0,14px 0,14px 4px,18px 4px,18px 14px,14px 14px,14px 18px,4px 18px,4px 14px,0 14px);";
+        const costStyle = "font-family:'Pixelify Sans',monospace; font-size:11px; line-height:1; padding:1px 5px;" + (v.disabled ? "color:#c46d5e; background:#f4e0d6;" : "color:#c08a1e; background:#fff3d6;") + notch;
+        return {
+          key: v.id, label: v.label, cost: v.cost || false, style, iconStyle, costStyle,
+          go: () => { const tt = this.tileByRC(rad.r, rad.c); this.setState({ radial: null }); if (tt) this.runVerb(v, tt); },
+        };
+      });
+    }
+
+    // toasts
+    const toasts = st.toasts.map(t => ({ id: t.id, text: t.text, style: "animation:fi-toast 2.1s ease-out forwards; font-family:'Pixelify Sans',monospace; font-size:14px; font-weight:600; padding:7px 14px; max-width:86vw; text-align:center; color:" + (t.kind === 'bad' ? '#fff' : '#4a3826') + "; background:" + (t.kind === 'bad' ? '#e07a5f' : '#fff7ea') + "; box-shadow:inset 0 0 0 3px " + (t.kind === 'bad' ? '#c85f47' : '#f3d698') + "; filter:drop-shadow(0 3px 0 rgba(120,80,20,.25));" + notch }));
+
+    const pulse = this._sleepPulse && (performance.now() - this._sleepPulse < 700);
+    const sleepStyle = "display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; width:64px; border:none; background:#6d5ca8; color:#fff0b8; box-shadow:inset 0 3px 0 rgba(255,255,255,.3), inset 0 -6px 0 rgba(30,20,60,.42), inset 0 0 0 3px #8574c0; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:13px; filter:drop-shadow(0 6px 0 #463880) drop-shadow(0 9px 6px rgba(40,25,80,.32));" + (pulse ? "animation:fi-pulse .5s 2;" : "") + notch4;
+
+    // sunrise report
+    const rep = st.report;
+    const iconSq = (color) => "width:26px; height:26px; flex:none; background:" + color + "; box-shadow:inset 0 -3px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35); clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));";
+    let reportRows = [];
+    if (rep) {
+      if (rep.grew) reportRows.push({ iconStyle: iconSq('#aadd85'), text: rep.grew + (rep.grew === 1 ? ' crop grew overnight' : ' crops grew overnight') });
+      if (rep.wilted) reportRows.push({ iconStyle: iconSq('#e07a5f'), text: 'Aw — ' + rep.wilted + ' dried out. Clear ' + (rep.wilted === 1 ? 'it' : 'them') + ' when you can' });
+      if (rep.restock) reportRows.push({ iconStyle: iconSq('#8fd3e0'), text: 'The pond restocked with fish' });
+      if (rep.rested) reportRows.push({ iconStyle: iconSq('#b7ad93'), text: 'The rock feels rested and ready' });
+      reportRows.push({ iconStyle: iconSq('#f5a623'), text: 'Energy restored — ' + st.maxEnergy + ' for the day' });
+      if (!rep.grew && !rep.wilted && !rep.restock && !rep.rested) reportRows.unshift({ iconStyle: iconSq('#c9a6ff'), text: 'A quiet night on the farm' });
+    }
+
+    // store tabs
+    const tab = (on) => "padding:8px 13px; border:none; cursor:pointer; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; color:" + (on ? '#6b5236' : '#b0996f') + "; background:" + (on ? '#ffe6bd' : '#f3e6cc') + "; box-shadow:inset 0 0 0 3px " + (on ? '#e6c489' : '#e7d6b4') + ";" + notch;
+
+    // shop
+    const buyBtn = (afford, owned) => "margin-top:auto; display:flex; align-items:center; justify-content:center; gap:6px; padding:9px; border:none; cursor:" + (owned ? 'default' : 'pointer') + "; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px;" + notch +
+      (owned ? "background:#efe7d4; color:#a29775; box-shadow:inset 0 0 0 3px #ddd2b8;" :
+        afford ? "background:#aadd85; color:#3a5c1f; box-shadow:inset 0 0 0 3px #bfe89b; filter:drop-shadow(0 3px 0 #7fb35c);"
+          : "background:#efe7d4; color:#c46d5e; box-shadow:inset 0 0 0 3px #ddd2b8;");
+    const mkShop = (key, kind, name, tag, color, desc, price) => {
+      const owned = kind === 'seed' ? !!st.unlocked[key] : !!st.tools[key];
+      const afford = st.coins >= price;
+      return {
+        key, name, tag, color, desc,
+        btnLabel: owned ? 'In your pouch' : price + 'c',
+        btnStyle: buyBtn(afford, owned),
+        onBuy: () => {
+          if (owned) { this.toast('Already yours', 'ok'); return; }
+          if (!afford) { this.toast('Not enough coins', 'bad'); return; }
+          this.setState(s => {
+            const next = { coins: s.coins - price };
+            if (kind === 'seed') next.unlocked = Object.assign({}, s.unlocked, { [key]: 1 });
+            else next.tools = Object.assign({}, s.tools, { [key]: 1 });
+            return next;
+          });
+          if (kind === 'seed') { this.markSeen(key); this.toast(name + ' added to your radial!', 'ok'); }
+          else this.toast(name + ' — handy!', 'ok');
+        },
+      };
+    };
+    const shopItems = [
+      mkShop('lettuce', 'seed', 'Lettuce Seeds', 'Seed · unlock', '#8fce5e', 'Premium greens — sells for 38.', 45),
+      mkShop('tomato', 'seed', 'Tomato Seeds', 'Seed · unlock', '#ef6a4e', 'Juicy vine crop — sells for 30.', 60),
+      mkShop('rod', 'tool', 'Copper Rod', 'Tool · Tier I', '#6cc3de', 'The pond holds one extra fish each day.', 120),
+      mkShop('pick', 'tool', 'Copper Pick', 'Tool · Tier I', '#b7ad93', 'Rocks take one extra strike each day.', 150),
+    ];
+
+    // craft (future — designed now)
+    const igChip = (ok, label) => ({ label, style: "font-family:'Pixelify Sans',monospace; font-size:12px; padding:3px 8px;" + notch + (ok ? "background:#f3ecdb; color:#7a6547; box-shadow:inset 0 0 0 2px #e4d7ba;" : "background:#f7e3dc; color:#c4523a; box-shadow:inset 0 0 0 2px #ecc6ba;") });
+    const craftCard = (locked) => "background:#fffaf0; box-shadow:inset 0 0 0 3px #f0e0c4; padding:12px 14px;" + notch4 + (locked ? "opacity:.72;" : "");
+    const craftIcon = (color, locked) => "width:38px; height:38px; flex:none; background:" + (locked ? '#c8bda4' : color) + "; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35);" + (locked ? "filter:grayscale(1) brightness(.85);" : "") + "clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));";
+    const craftBtn = (can) => "flex:none; padding:9px 14px; border:none; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:13px; cursor:pointer;" + notch +
+      (can ? "background:#aadd85; color:#3a5c1f; box-shadow:inset 0 0 0 3px #bfe89b; filter:drop-shadow(0 3px 0 #7fb35c);" : "background:#efe7d4; color:#a29775; box-shadow:inset 0 0 0 3px #ddd2b8;");
+    const soon = () => this.toast('The workbench arrives soon!', 'ok');
+    const crafts = [
+      { name: 'Copper Bar', tag: 'Forge · smelt raw ore', note: false, cardStyle: craftCard(false), iconStyle: craftIcon('#d98a4f', false), btn: 'Forge', btnStyle: craftBtn(true), onCraft: soon, ing: [igChip(true, '5 × Copper Ore')] },
+      { name: 'Sturdy Pick II', tag: 'Tool · Tier II', note: false, cardStyle: craftCard(false), iconStyle: craftIcon('#8a94a0', false), btn: 'Craft', btnStyle: craftBtn(false), onCraft: soon, ing: [igChip(false, '0/2 × Copper Bar'), igChip(true, '1 × Oak Handle')] },
+      { name: 'Smoked Fish', tag: 'Artisan good · worth 3× fresh', note: 'Needs Smoker', cardStyle: craftCard(true), iconStyle: craftIcon('#e58a6a', true), btn: 'Smoke', btnStyle: craftBtn(false), onCraft: soon, ing: [igChip(true, '2 × Fish'), igChip(true, '1 × Oak Chips')] },
+      { name: 'Barley Beer', tag: 'Artisan good · worth 4× wheat', note: 'Needs Keg', cardStyle: craftCard(true), iconStyle: craftIcon('#eecf5f', true), btn: 'Brew', btnStyle: craftBtn(false), onCraft: soon, ing: [igChip(true, '3 × Wheat')] },
+    ];
+
+    // boost
+    const upBtn = (afford, maxed) => "flex:none; display:flex; align-items:center; gap:6px; padding:9px 12px; border:none; font-family:'Pixelify Sans',monospace; font-weight:600; font-size:14px; cursor:" + (maxed ? 'default' : 'pointer') + ";" + notch +
+      (maxed ? "background:#efe7d4; color:#a29775; box-shadow:inset 0 0 0 3px #ddd2b8;" :
+        afford ? "background:#ffd79b; color:#7a4a12; box-shadow:inset 0 0 0 3px #ffe6bd; filter:drop-shadow(0 3px 0 #e6ac5e);"
+          : "background:#efe7d4; color:#c46d5e; box-shadow:inset 0 0 0 3px #ddd2b8;");
+    const upDefs = [
+      { key: 'energy', name: 'Extra Energy', color: '#f5a623', max: 3, base: 80, apply: () => this.setState(s => ({ up: Object.assign({}, s.up, { energy: s.up.energy + 1 }), maxEnergy: s.maxEnergy + 2, energy: s.energy + 2 })), desc: (lv, maxed) => maxed ? 'You bound out of bed — ' + st.maxEnergy + ' energy a day.' : 'Now ' + st.maxEnergy + ' a day · next +2' },
+      { key: 'fert', name: 'Rich Fertilizer', color: '#c69c6d', max: 2, base: 120, apply: () => this.setState(s => ({ up: Object.assign({}, s.up, { fert: s.up.fert + 1 }) })), desc: (lv, maxed) => maxed ? 'Feed pushes crops ' + this.feedStages() + ' whole stages.' : 'Feed pushes ' + this.feedStages() + ' stage' + (this.feedStages() > 1 ? 's' : '') + ' · next +1' },
+    ];
+    const upgrades = upDefs.map(d => {
+      const lv = st.up[d.key], maxed = lv >= d.max, cost = d.base * (lv + 1), afford = st.coins >= cost;
+      return {
+        key: d.key, name: d.name, color: d.color,
+        level: 'Lv ' + lv + '/' + d.max,
+        desc: d.desc(lv, maxed),
+        btnLabel: maxed ? 'Maxed' : cost + 'c',
+        btnStyle: upBtn(afford, maxed),
+        onBuy: () => {
+          if (maxed) return;
+          if (!afford) { this.toast('Not enough coins', 'bad'); return; }
+          this.setState(s => ({ coins: s.coins - cost }));
+          d.apply();
+          this.toast(d.name + ' improved!', 'ok');
+        },
+      };
+    });
+
+    // almanac
+    const seen = st.seen;
+    const gcard = notch4;
+    const gicon = "clip-path:polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));";
+    const gi = (key, name, color, desc) => { const on = !!seen[key]; return { key, name: on ? name : '? ? ?', desc: on ? desc : 'Not yet discovered', cardStyle: "display:flex; align-items:center; gap:9px; background:#fffaf0; box-shadow:inset 0 0 0 3px #f0e0c4; padding:9px 10px;" + gcard + (on ? '' : 'opacity:.5;'), iconStyle: "width:30px; height:30px; flex:none; background:" + (on ? color : '#d7c8ac') + "; box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 0 0 2px rgba(255,255,255,.35);" + gicon }; };
+    const allKeys = ['carrot', 'wheat', 'lettuce', 'tomato', 'plot', 'flower', 'pond', 'rock', 'sprinkler', 'scarecrow', 'coin', 'fish', 'ore', 'gem'];
+    const seenCount = allKeys.filter(k => seen[k]).length + ' / ' + allKeys.length;
+    const guide = [
+      { title: 'Crops', items: [gi('carrot', 'Carrot', '#f0894a', 'Fast & cheap. Sells for 14.'), gi('wheat', 'Wheat', '#eecf5f', 'Steady staple. Sells for 26.'), gi('lettuce', 'Lettuce', '#8fce5e', 'Premium greens. Sells for 38.'), gi('tomato', 'Tomato', '#ef6a4e', 'Juicy vine crop. Sells for 30.')] },
+      { title: 'Land & Features', items: [gi('plot', 'Tilled Plot', '#c69c6d', 'Soft soil, ready to plant.'), gi('flower', 'Wildflowers', '#c9a6ff', 'Pollinators adore them.'), gi('pond', 'Pond', '#8fd3e0', 'Cast for fish · restocks overnight.'), gi('rock', 'Rock', '#b7ad93', 'Mine for ore · rests when spent.')] },
+      { title: 'Structures', items: [gi('sprinkler', 'Sprinkler', '#6cc3de', 'Waters its tile + neighbours.'), gi('scarecrow', 'Scarecrow', '#c79a5a', 'Keeps dry crops from wilting.')] },
+      { title: 'Goods', items: [gi('coin', 'Coins', '#f7c948', 'Spent on seeds, land & tools.'), gi('fish', 'Fish', '#f0894a', 'Caught at ponds for coins.'), gi('ore', 'Ore', '#b3ab92', 'Chipped from rocky outcrops.'), gi('gem', 'Gems', '#a98bf0', 'A rare, lucky strike.')] },
+    ];
+
+    return {
+      hover: hv, hoverStyle,
+      coins: st.coins.toLocaleString(), gems: st.gems, day: st.day, bloomTxt: '×' + st.bloom.toFixed(2).replace(/0$/, ''),
+      energyTxt: st.energy + '/' + st.maxEnergy, energyPct: Math.round(st.energy / st.maxEnergy * 100) + '%',
+      toasts,
+      hintOn: (this.props.showHints ?? true) && !st.hintDone && st.day === 1 && st.phase === 'day' && !st.report,
+      radialOpen, radialSlices, scrimStyle, radialWrapStyle, radialTitle, radialTitleStyle,
+      radialCenterStyle, radialCenterLabel, radialCenterCost, radialCenterGo,
+      closeRadial: () => this.closeRadial(),
+      onSleep: () => this.onSleep(), sleepStyle,
+      nightStyle: "position:absolute; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 40%, #35306a, #201b45 70%); transition:opacity .6s; pointer-events:" + (st.phase === 'night' ? 'auto' : 'none') + "; opacity:" + (st.phase === 'night' ? '1' : '0') + ";",
+      nightTitle: st.night.title, nightSub: st.night.sub,
+      reportOpen: !!st.report, reportRows,
+      closeReport: () => this.setState({ report: null }),
+      storeOpen: st.storeOpen,
+      isShop: st.storeTab === 'shop', isCraft: st.storeTab === 'craft', isBoost: st.storeTab === 'boost', isGuide: st.storeTab === 'guide',
+      tabShopStyle: tab(st.storeTab === 'shop'), tabCraftStyle: tab(st.storeTab === 'craft'), tabBoostStyle: tab(st.storeTab === 'boost'), tabGuideStyle: tab(st.storeTab === 'guide'),
+      openStore: () => this.setState({ storeOpen: true, radial: null, hover: null }),
+      closeStore: () => this.setState({ storeOpen: false }),
+      showShop: () => this.setState({ storeTab: 'shop' }),
+      showCraft: () => this.setState({ storeTab: 'craft' }),
+      showBoost: () => this.setState({ storeTab: 'boost' }),
+      showGuide: () => this.setState({ storeTab: 'guide' }),
+      stop: (e) => e.stopPropagation(),
+      shopItems, crafts, upgrades, guide, seenCount,
+    };
+  }
+}
+</script>
+</body>
+</html>
