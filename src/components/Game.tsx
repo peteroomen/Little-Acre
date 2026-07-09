@@ -14,6 +14,7 @@ import { NightOverlay } from './ui/NightOverlay';
 import { ObjectiveBanner, PuzzleIntro, PuzzleResult } from './ui/PuzzleOverlays';
 import { RadialMenu } from './ui/RadialMenu';
 import { StoreModal } from './ui/StoreModal';
+import { SunriseReport } from './ui/SunriseReport';
 import { Toasts } from './ui/Toasts';
 
 export function Game() {
@@ -231,6 +232,7 @@ export function Game() {
       <Hotbar />
       <Toasts />
       <NightOverlay />
+      <SunriseReport />
       <StoreModal />
       <PuzzleIntro />
       <PuzzleResult />

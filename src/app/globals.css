@@ -353,3 +353,80 @@ canvas {
     animation: none !important;
   }
 }
+
+/* ── S4: hud+radial+sunrise ──
+   Extra fills for the Farm HUD chips, the restyled press-hold radial, and the
+   Sunrise Report dawn card. Solid hexes only — alpha scrims/shadows stay inline
+   (matching the existing overlay convention). */
+:root {
+  /* gems chip (purple sticker) */
+  --la-gem-soft-bg: #f5eeff;
+  --la-gem-soft-line: #d3bff2;
+  --la-gem-soft-shadow: #c8b0ec;
+  --la-gem-ring: #efe3ff; /* gem diamond inner ring */
+
+  /* Day · Bloom chip (warm sticker) */
+  --la-day-bg: #fff2e4;
+  --la-day-line: #f4cfa6;
+  --la-day-shadow: #eec092;
+  --la-day-label: #cf8f5c; /* "DAY" caption */
+  --la-day-sep: #f0cfa8; /* divider bar */
+
+  /* lightning glyph + sunrise sun (slightly deeper than the bar fill) */
+  --la-energy-icon: #f5a623;
+
+  /* radial — highlighted (under-thumb) petal / centre */
+  --la-radial-hi: #ffe1a0;
+  --la-radial-hi-line: #f0bd5e;
+  --la-radial-hi-shadow: #d99f3e;
+  --la-radial-hi-text: #8a5c14;
+  /* radial — unaffordable / disabled petal */
+  --la-radial-dim: #efe7d4;
+  --la-radial-dim-line: #ddd2b8;
+  --la-radial-dim-text: #a29775;
+  /* radial — disabled centre (a touch deeper than a dim petal) */
+  --la-radial-center-dim: #e3dcc8;
+  --la-radial-center-dim-line: #d4cbb0;
+  /* radial — unaffordable cost chip */
+  --la-cost-bad-bg: #f4e0d6;
+  --la-cost-bad-text: #c46d5e;
+  --la-radial-title: #fff7ea; /* verb name above the ring */
+
+  /* Sunrise Report node-row swatches */
+  --la-node-pond: #8fd3e0;
+  --la-node-rock: #b7ad93;
+}
+
+/* Sticker for a highlighted radial petal / centre (under the thumb). */
+.la-sticker-hi {
+  background: var(--la-radial-hi);
+  color: var(--la-radial-hi-text);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -5px 0 rgba(150, 100, 20, 0.3),
+    inset 0 0 0 3px var(--la-radial-hi-line);
+  filter: drop-shadow(0 4px 0 var(--la-radial-hi-shadow));
+}
+
+/* Dawn-card rise (mockup fi-rise): a gentle overshoot pop. */
+@keyframes la-rise {
+  0% {
+    transform: translateY(18px) scale(0.94);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+/* Radial bloom (mockup fi-bloom): the ~90ms scale-up the ring fans in with. */
+@keyframes la-bloom {
+  0% {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
