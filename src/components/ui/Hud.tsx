@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
+
 import { fmt, fmtBloom } from '@/lib/game/numbers';
+import { getPuzzle } from '@/lib/game/puzzles';
 import { useGameStore } from '@/lib/game/store';
 
 /** Top HUD: coin/gem counters (left) and Day · Bloom · Energy + Sleep (right). */
@@ -14,8 +17,47 @@ export function Hud() {
   const phase = useGameStore((s) => s.phase);
   const sleepPulse = useGameStore((s) => s.sleepPulse);
   const sleep = useGameStore((s) => s.sleep);
+  const mode = useGameStore((s) => s.mode);
+  const puzzle = useGameStore((s) => s.puzzle);
+  const toast = useGameStore((s) => s.toast);
 
   const energyPct = Math.round((energy / maxEnergy) * 100);
+
+  // "Today only" (nightLimit 0) puzzles: sleeping instantly loses, so the Sleep button is
+  // subdued and asks for a confirming second tap within a few seconds. Guard is component-level
+  // state only — store.sleep is untouched, so deliberately sleeping (losing) stays possible.
+  const guardDef = mode === 'puzzle' && puzzle ? getPuzzle(puzzle.id) : undefined;
+  const guardSleep = !!guardDef && guardDef.nightLimit === 0;
+  const [armed, setArmed] = useState(false);
+  const disarmRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (disarmRef.current) window.clearTimeout(disarmRef.current);
+    };
+  }, []);
+
+  const onSleep = () => {
+    if (phase !== 'day') return;
+    if (guardSleep && !armed) {
+      toast(`Sleeping ends ${guardDef?.name ?? 'the day'}!`, 'bad');
+      setArmed(true);
+      if (disarmRef.current) window.clearTimeout(disarmRef.current);
+      disarmRef.current = window.setTimeout(() => setArmed(false), 3000);
+      return;
+    }
+    if (disarmRef.current) window.clearTimeout(disarmRef.current);
+    setArmed(false);
+    sleep();
+  };
+
+  const sleepStyle = armed
+    ? { animation: 'la-pulse .5s 3' }
+    : guardSleep
+      ? { opacity: 0.6, filter: 'saturate(.7)' }
+      : sleepPulse
+        ? { animation: 'la-pulse .5s 2' }
+        : undefined;
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
@@ -70,15 +112,16 @@ export function Hud() {
         </div>
         <button
           key={sleepPulse}
-          onClick={sleep}
+          onClick={onSleep}
           disabled={phase !== 'day'}
+          aria-label={armed ? 'Confirm sleep — this ends the puzzle' : 'Sleep'}
           className="la-notch la-anim flex w-[66px] flex-col items-center justify-center gap-0.5 bg-[var(--la-sleep)] px-1.5 py-2.5 font-pixel text-[13px] font-semibold text-[#fff0b8] shadow-[inset_0_3px_0_rgba(255,255,255,.3),inset_0_-6px_0_rgba(30,20,60,.42),inset_0_0_0_3px_#8574c0] active:translate-y-0.5 disabled:opacity-70"
-          style={sleepPulse ? { animation: 'la-pulse .5s 2' } : undefined}
+          style={sleepStyle}
         >
           <svg width="24" height="24" viewBox="0 0 26 26" aria-hidden>
             <path d="M18 15 A7 7 0 1 1 11 6 A5.5 5.5 0 0 0 18 15 Z" fill="#fff0b8" />
           </svg>
-          <span>Sleep</span>
+          <span>{armed ? 'Sure?' : 'Sleep'}</span>
         </button>
       </div>
     </div>

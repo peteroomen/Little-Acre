@@ -8,6 +8,7 @@
  */
 
 import {
+  COVERAGE,
   CROP,
   FLOWER,
   FURROW,
@@ -87,12 +88,18 @@ export class BoardRenderer {
   private lt = 0;
   private raf = 0;
   private ro: ResizeObserver | null = null;
+  /** Sprinkler coverage-preview cells (plus-shape), or null when nothing is being placed. */
+  private coverageHint: { r: number; c: number }[] | null = null;
+  private reducedMotion = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('2D canvas context unavailable');
     this.ctx = ctx;
+    this.reducedMotion =
+      typeof window !== 'undefined' &&
+      !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     for (let i = 0; i < 16; i++) {
       this.amb.push({
         x: Math.random(),
@@ -109,6 +116,16 @@ export class BoardRenderer {
 
   setSnapshot(s: BoardSnapshot): void {
     this.snapshot = s;
+  }
+
+  /**
+   * Show (or replace) the sprinkler coverage-preview cells — the pressed tile plus its watered
+   * orthogonal neighbours — while the radial highlights a Sprinkler placement or rests on an
+   * existing one. Pass null to clear. Driven imperatively from Game.tsx's radial subscription so
+   * no per-frame state crosses React.
+   */
+  setCoverageHint(cells: { r: number; c: number }[] | null): void {
+    this.coverageHint = cells && cells.length ? cells : null;
   }
 
   start(): void {
@@ -355,6 +372,7 @@ export class BoardRenderer {
     this.drawSkirt();
     const order = [...this.snapshot.board].sort((a, b) => a.r + a.c - (b.r + b.c));
     for (const t of order) this.drawTile(t, time);
+    this.drawCoverage(time);
 
     for (let i = this.fx.length - 1; i >= 0; i--) {
       const f = this.fx[i];
@@ -436,6 +454,42 @@ export class BoardRenderer {
     c.lineTo(bx, by + D);
     c.closePath();
     c.fill();
+  }
+
+  /**
+   * Soft water-toned plus-shape glow over the sprinkler coverage cells. Drawn above the tile art
+   * (so it reads as a tint on the soil) but below particles. The gentle alpha pulse is frozen flat
+   * under prefers-reduced-motion.
+   */
+  private drawCoverage(time: number): void {
+    if (!this.coverageHint) return;
+    const c = this.ctx;
+    const { HW, QH } = this;
+    const pulse = this.reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(time * 3);
+    const fillA = 0.16 + 0.14 * pulse;
+    c.save();
+    c.lineJoin = 'round';
+    for (const cell of this.coverageHint) {
+      const g = this.geom.get(this.key(cell.r, cell.c));
+      if (!g) continue;
+      const cx = g.cx;
+      const oy = g.cy;
+      c.beginPath();
+      c.moveTo(cx, oy);
+      c.lineTo(cx + HW, oy + QH);
+      c.lineTo(cx, oy + QH * 2);
+      c.lineTo(cx - HW, oy + QH);
+      c.closePath();
+      c.globalAlpha = fillA;
+      c.fillStyle = COVERAGE.fill;
+      c.fill();
+      c.globalAlpha = 0.45 + 0.35 * pulse;
+      c.strokeStyle = COVERAGE.edge;
+      c.lineWidth = 2;
+      c.stroke();
+    }
+    c.globalAlpha = 1;
+    c.restore();
   }
 
   private drawTile(t: Tile, time: number): void {

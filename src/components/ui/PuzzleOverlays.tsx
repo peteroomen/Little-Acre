@@ -21,6 +21,8 @@ export function ObjectiveBanner() {
 
   // Objective union (harvest | coins): label + target come from the helpers, not the fields.
   const target = objectiveTarget(def.objective);
+  const isCoins = def.objective.kind === 'coins';
+  const isToday = def.nightLimit === 0;
   const nightsShown = Math.min(puzzle.nightsUsed, def.nightLimit);
 
   return (
@@ -37,21 +39,45 @@ export function ObjectiveBanner() {
         <span className="h-7 w-0.5 bg-[#f0cfa8]" />
         <div className="flex flex-col items-center leading-tight">
           <span className="text-[10px] font-semibold uppercase tracking-wide text-[#c99a6e]">
-            Got
+            {isCoins ? 'Earned' : 'Got'}
           </span>
-          <span className="font-pixel text-[15px] font-semibold text-[#c46d38]">
+          <span
+            className={`flex items-center gap-1 font-pixel text-[15px] font-semibold ${
+              isCoins ? 'text-[var(--la-coin-text)]' : 'text-[#c46d38]'
+            }`}
+          >
+            {isCoins && (
+              <span className="h-3 w-3 bg-[var(--la-coin)] shadow-[inset_0_0_0_1.5px_#fce9b0]" />
+            )}
             {puzzle.progress} / {target}
           </span>
         </div>
         <span className="h-7 w-0.5 bg-[#f0cfa8]" />
-        <div className="flex flex-col items-center leading-tight">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[#c99a6e]">
-            Night
-          </span>
-          <span className="font-pixel text-[15px] font-semibold text-[#6a4bb0]">
-            {nightsShown} / {def.nightLimit}
-          </span>
-        </div>
+        {isToday ? (
+          <div
+            className="flex items-center gap-1.5"
+            aria-label="Today only — the cart leaves at dusk"
+          >
+            <DuskGlyph />
+            <div className="flex flex-col leading-tight">
+              <span className="font-pixel text-[12px] font-semibold text-[var(--la-danger)]">
+                Today only
+              </span>
+              <span className="text-[9px] uppercase tracking-wide text-[#c99a6e]">
+                Cart leaves at dusk
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center leading-tight">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[#c99a6e]">
+              Night
+            </span>
+            <span className="font-pixel text-[15px] font-semibold text-[#6a4bb0]">
+              {nightsShown} / {def.nightLimit}
+            </span>
+          </div>
+        )}
         <button
           onClick={goPuzzleSelect}
           className="la-notch ml-1 h-7 w-7 flex-none bg-[#fff1dd] text-sm text-[#a0895f] shadow-[inset_0_0_0_2px_#e7cfa5] active:translate-y-0.5"
@@ -61,6 +87,22 @@ export function ObjectiveBanner() {
         </button>
       </div>
     </div>
+  );
+}
+
+/** Tiny dusk sun dipping past the horizon — the "cart leaves at dusk" deadline cue. */
+function DuskGlyph() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden>
+      <circle cx="10" cy="12" r="5" fill="var(--la-energy)" />
+      <rect x="2" y="13" width="16" height="2" fill="var(--la-panel-line)" />
+      <path
+        d="M10 2 v2 M4 4 l1.4 1.4 M16 4 l-1.4 1.4 M2 9 h2 M16 9 h2"
+        stroke="var(--la-coin)"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
@@ -125,6 +167,15 @@ export function PuzzleResult() {
   const next = PUZZLES[index + 1];
   const nextUnlocked = !!next && isPuzzleUnlocked(index + 1, puzzleStars);
 
+  // Par context line: 0-night puzzles race the dusk; the rest compare nights to the solver par.
+  const n = puzzle.nightsUsed;
+  const parLine =
+    def.nightLimit === 0
+      ? 'Done before dusk!'
+      : `Done in ${n} night${n === 1 ? '' : 's'} — par is ${def.stars.three}${
+          n <= def.stars.three ? '!' : '.'
+        }`;
+
   return (
     <div
       className="absolute inset-0 z-40 flex items-center justify-center p-5"
@@ -143,11 +194,7 @@ export function PuzzleResult() {
             <div className="mt-4 flex justify-center">
               <BigStars value={puzzle.stars} />
             </div>
-            <p className="mt-3 text-sm text-[#7a6547]">
-              Done in <span className="font-semibold text-[#c46d38]">{puzzle.nightsUsed}</span>{' '}
-              night{puzzle.nightsUsed === 1 ? '' : 's'}.
-              {puzzle.stars < 3 ? ` 3★ needs ${def.stars.three}.` : ' Perfect!'}
-            </p>
+            <p className="mt-3 text-sm text-[#7a6547]">{parLine}</p>
           </>
         ) : (
           <p className="mt-3 text-sm leading-relaxed text-[#7a6547]">
@@ -185,18 +232,33 @@ export function PuzzleResult() {
   );
 }
 
-/** Large three-star row for the result modal. */
+/**
+ * Large three-star row for the result modal. Earned stars pop in 0→N with a staggered delay;
+ * `la-anim` lets the reduced-motion rule in globals.css freeze them to a static filled state.
+ */
 function BigStars({ value }: { value: number }) {
   return (
     <span className="flex gap-1.5" aria-label={`${value} of 3 stars`}>
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className={`text-4xl leading-none ${i < value ? 'text-[#f5b23c] drop-shadow-[0_2px_0_rgba(200,130,20,.35)]' : 'text-[#dcccae]'}`}
-        >
-          ★
-        </span>
-      ))}
+      {[0, 1, 2].map((i) => {
+        const filled = i < value;
+        return (
+          <span
+            key={i}
+            className={`la-anim text-4xl leading-none ${
+              filled
+                ? 'text-[#f5b23c] drop-shadow-[0_2px_0_rgba(200,130,20,.35)]'
+                : 'text-[#dcccae]'
+            }`}
+            style={
+              filled
+                ? { animation: `la-star-pop .34s ${i * 0.12}s cubic-bezier(.34,1.56,.64,1) both` }
+                : undefined
+            }
+          >
+            ★
+          </span>
+        );
+      })}
     </span>
   );
 }
